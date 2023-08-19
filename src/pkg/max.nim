@@ -152,8 +152,24 @@ func toArr[N: static int; T](s: seq[T]): array[N, T] =
   for i in 0 ..< N:
     result[i] = s[i]
 
+type 
+  UnderLine = object
+
+func parseUnderline()
+
+type
+  MagicIdent = object
+    name: string
+    params: Table[string, string]
+
+func parseMagicIdent(s: string, offset: Natural): MagicIdent =
+  let parts = s.split '!'
+  result.name = parts[0][(offset+1)..^1]
+  for i in countup(1, parts.high, 2):
+    result.params[parts[i][1..^1]] = parts[i+1]
+
 func parseMax(content: string): MaxLayoutFile =
-  var 
+  var
     layer = ""
     defi = 0
 
@@ -171,24 +187,23 @@ func parseMax(content: string): MaxLayoutFile =
         of "resolution": result.resolution = tokens[1].floatVal
         of "DEF":
           case tokens.len
-          of 1: discard
+          of 1:
+            defi = 0
           of 4:
             let
-              compoundName = tokens[1]
+              compoundName = parseMagicIdent(tokens[1].strval, 0)
               _ = tokens[2]
               id = tokens[3]
+
           else:
             err "what??"
 
-        of "SECTION":
-          let sectionName = tokens[1].strval
-
         of "layer":
-          let layer = tokens[1].strval
+          layer = tokens[1].strval
 
         of "lab":
+          layer = tokens[1].strval
           let
-            layer = tokens[1].strval
             pos = tokens[2..5].map(t => t.intval)
             what = tokens[6..7].map(t => t.intval)
             txt = tokens[8].strVal
@@ -201,15 +216,20 @@ func parseMax(content: string): MaxLayoutFile =
         of "bbox":
           let bound = tokens[1..4].map(t => t.intval)
 
-        of "uses", "vMAIN", "vDRC", "vBBOX": discard
+        of "SECTION", "uses", "vMAIN", "vDRC", "vBBOX": discard
         else: # in uses
           case head.strval[0]
           of '_': discard
-          of '/': discard
+          of '/':
+            let 
+              i = head.strval.find('_')
+              mi = parseMagicIdent(, 1)
+            debugEcho mi
           else: err "invalid"
 
       of mtkInt: # in layer
         let bound = toArr[4, int](tokens.map(t => t.intVal))
+
 
       of mtkCloseBracket, mtkComment: discard
       else: err "invalid node kind: " & $head.kind & ' ' & $head
