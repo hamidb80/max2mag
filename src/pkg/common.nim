@@ -1,6 +1,5 @@
 import std/[macros]
 
-
 template err*(msg): untyped =
   raise newException(ValueError, msg)
 
