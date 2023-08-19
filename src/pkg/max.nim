@@ -1,9 +1,7 @@
-import std/[strutils, tables, sequtils, parseutils, sugar]
+import std/[strutils, tables, sequtils, options, parseutils, sugar]
 import ./common
 
 type
-  Instance = object
-
   RectPart = enum
     l # left
     b # bottom
@@ -13,9 +11,19 @@ type
   Rect = array[RectPart, int]
 
   TransformPart = enum
-    a, b, c, d, e, f
+    a, bb, c, d, e, f
 
   Transform = array[TransformPart, int]
+
+  Use = object # TODO what is partial ??
+    id: int
+    ident: Option[MaxIdent]
+    trans: Transform
+
+  Instance = ref object
+    comp: Component
+    bound: Rect
+    uses: seq[Use]
 
   Label = object
     pos: Rect
@@ -32,7 +40,7 @@ type
     name: string
     params: Table[string, string]
 
-  Component = object
+  Component = ref object
     ident: MaxIdent
     layers: Table[string, Layer]
     instances: seq[Instance]
@@ -189,12 +197,12 @@ func toTransform(s: seq[int]): Transform =
   assert s.len == 6
   Transform toArr[6, int](s)
 
-import strformat
-func `$`(t: Transform): string =
-  fmt"""
-  {t[a]} {t[d]} 0
-  {t[b]} {t[e]} 0
-  {t[c]} {t[f]} 1"""
+func toInts(s: seq[MaxToken]): seq[int] =
+  s.map(t => t.intval)
+
+func toRect(s: seq[int]): Rect = 
+  toArr[4, int](s)
+
 
 func parseMaxIdent(s: string): MaxIdent =
   let parts = s.split '!'
@@ -209,6 +217,7 @@ func parseMax(content: string): MaxLayoutFile =
     defIdent: MaxIdent
 
   for line in splitLines content:
+    debugEcho line
     if not line.isEmptyOrWhitespace:
       let
         tokens = lex line
@@ -240,10 +249,10 @@ func parseMax(content: string): MaxLayoutFile =
         of "lab":
           layer = tokens[1].strval
           let
-            ints = tokens[2..7].map(t => t.intval)
+            ints = tokens[2..7].toInts
             lbl = Label(
               text: tokens[8].strVal,
-              pos: Rect toArr[4, int](ints),
+              pos: toRect(ints),
               what1: ints[4],
               what2: ints[5])
 
@@ -255,25 +264,33 @@ func parseMax(content: string): MaxLayoutFile =
             instanceName = tokens[2].strVal
 
         of "bbox":
-          let bound = tokens[1..4].map(t => t.intval)
+          let bound = toRect tokens[1..4].toInts
+          result.defs[defi].instances[^1].bound = bound # XXX nim 2 does not raise an exception, it quits like C
 
-        of "uses":
-          discard
+        of "SECTION", "uses", "vMAIN", "vDRC", "vBBOX": discard
 
-        of "SECTION", "vMAIN", "vDRC", "vBBOX": discard
         else: # in uses
-          case h[0]
-          of '_': discard
-          of '/':
-            let
-              i = h.find('_')
-              mi = parseMaxIdent h[1..<i]
-              tr = toTransform(tokens[1..^1].map(t => t.intval))
+          var u: Use
+          (u.id, u.ident, u.trans) =
+            case h[0]
+            of '_': 
+              (parseInt h[1..^1], 
+                none MaxIdent, 
+                toTransform(tokens[1..^1].toInts))
 
-          else: err "invalid"
+            of '/':
+              let i = h.find('_')
+              (parseInt h[i+1..^1], 
+                some parseMaxIdent h[1..<i], 
+                toTransform(tokens[1..^1].toInts))
+
+            else: err "invalid"
+          
+          result.defs[defi].instances[^1].uses.add u
+
 
       of mtkInt: # in layer
-        let bound: Rect = toArr[4, int](tokens.map(t => t.intVal))
+        let bound = toRect (tokens.toInts)
         result.defs[defi].layers.addRect layer, bound
 
       of mtkCloseBracket, mtkComment: discard

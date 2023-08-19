@@ -137,7 +137,11 @@ if(n!= 7 && n!= 13) goto error;
 
 ```
 
-https://arato.inf.unideb.hu/fazekas.gabor/oktatas/multimedia/BOOKS/newman_sproul_princ_comp_graph.pdf
+ 
+![page 57](./docs/transform3x3-1.png)
+![page 58](./docs/transform3x3-2.png)
+parts of [mentioned book](https://arato.inf.unideb.hu/fazekas.gabor/oktatas/multimedia/BOOKS/newman_sproul_princ_comp_graph.pdf
+)
 
 ```c
 /*-------------------------------------------------------------------
