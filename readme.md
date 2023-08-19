@@ -92,16 +92,6 @@ StrDup(&depDef->cd_showInst, buf);
 	      def->cd_name);
 
 - `_` in first:
-```
-_0 1 0 -90 0 1 -1450
-```
-```c
-// src/max4.../m/database/dbinstance.c
-typedef struct
-{
-    int t_a, t_b, t_c, t_d, t_e, t_f;
-} Transform;
-```
 
 search `\b_version`
 
@@ -146,6 +136,8 @@ n = sscanf(
 if(n!= 7 && n!= 13) goto error;
 
 ```
+
+https://arato.inf.unideb.hu/fazekas.gabor/oktatas/multimedia/BOOKS/newman_sproul_princ_comp_graph.pdf
 
 ```c
 /*-------------------------------------------------------------------

@@ -1,19 +1,40 @@
 import std/[strutils, tables, sequtils, parseutils, sugar]
-import labeledtypes
 import ./common
 
 type
   Instance = object
 
-  Rect = array[4, int]
-  Label = object
+  RectPart = enum
+    l # left
+    b # bottom
+    r # right
+    t # top
 
-  Parts = object
+  Rect = array[RectPart, int]
+
+  TransformPart = enum
+    a, b, c, d, e, f
+
+  Transform = array[TransformPart, int]
+
+  Label = object
+    pos: Rect
+    text: string
+    what1: int
+    what2: int
+
+  Layer = object
+    name: string
     rects: seq[Rect]
-    lables: seq[Label]
+    labels: seq[Label]
+
+  MaxIdent = object
+    name: string
+    params: Table[string, string]
 
   Component = object
-    layers: Table[string, Parts]
+    ident: MaxIdent
+    layers: Table[string, Layer]
     instances: seq[Instance]
     # versions ??
 
@@ -88,6 +109,18 @@ func parseMaxIdent(content: string, offset: int, buff: var string): Natural =
   buff = content[offset..<tail]
   tail - offset
 
+func addLayerIfNotExists(layers: var Table[string, Layer], layer: string) =
+  if layer notin layers:
+    layers[layer] = Layer(name: layer)
+
+func addRect(layers: var Table[string, Layer], layer: string, bound: Rect) =
+  addLayerIfNotExists layers, layer
+  layers[layer].rects.add bound
+
+func addLabel(layers: var Table[string, Layer], layer: string, lbl: Label) =
+  addLayerIfNotExists layers, layer
+  layers[layer].labels.add lbl
+
 func lex(content: string): seq[MaxToken] =
   var
     i = 0
@@ -144,27 +177,28 @@ func lex(content: string): seq[MaxToken] =
         sett MaxToken(kind: mtkInt, intval: buffi)
 
     else:
-      err "not a valid char: " & curr
+      err "not a valid char: '" & curr & "'"
 
     last = curr
 
-func toArr[N: static int; T](s: seq[T]): array[N, T] =
+func toArr[N: static int; T](s: seq[T], offset: Natural = 0): array[N, T] =
   for i in 0 ..< N:
-    result[i] = s[i]
+    result[i] = s[i+offset]
 
-type 
-  UnderLine = object
+func toTransform(s: seq[int]): Transform =
+  assert s.len == 6
+  Transform toArr[6, int](s)
 
-func parseUnderline()
+import strformat
+func `$`(t: Transform): string =
+  fmt"""
+  {t[a]} {t[d]} 0
+  {t[b]} {t[e]} 0
+  {t[c]} {t[f]} 1"""
 
-type
-  MagicIdent = object
-    name: string
-    params: Table[string, string]
-
-func parseMagicIdent(s: string, offset: Natural): MagicIdent =
+func parseMaxIdent(s: string): MaxIdent =
   let parts = s.split '!'
-  result.name = parts[0][(offset+1)..^1]
+  result.name = parts[0][1..^1]
   for i in countup(1, parts.high, 2):
     result.params[parts[i][1..^1]] = parts[i+1]
 
@@ -172,6 +206,7 @@ func parseMax(content: string): MaxLayoutFile =
   var
     layer = ""
     defi = 0
+    defIdent: MaxIdent
 
   for line in splitLines content:
     if not line.isEmptyOrWhitespace:
@@ -181,22 +216,23 @@ func parseMax(content: string): MaxLayoutFile =
 
       case head.kind
       of mtkIdent:
-        case head.strval
+        let h = head.strval
+
+        case h
         of "max": result.version = tokens[1].intVal
         of "tech": result.tech = tokens[1].strVal
         of "resolution": result.resolution = tokens[1].floatVal
         of "DEF":
-          case tokens.len
-          of 1:
-            defi = 0
-          of 4:
-            let
-              compoundName = parseMagicIdent(tokens[1].strval, 0)
-              _ = tokens[2]
-              id = tokens[3]
+          (defi, defIdent) =
+            case tokens.len
+            of 1: (0, MaxIdent())
+            of 4:
+              let c = parseMaxIdent tokens[1].strval
+              (c.params["_version"].parseInt, c)
+            else:
+              err "what??"
 
-          else:
-            err "what??"
+          result.defs[defi] = Component(ident: defIdent)
 
         of "layer":
           layer = tokens[1].strval
@@ -204,9 +240,14 @@ func parseMax(content: string): MaxLayoutFile =
         of "lab":
           layer = tokens[1].strval
           let
-            pos = tokens[2..5].map(t => t.intval)
-            what = tokens[6..7].map(t => t.intval)
-            txt = tokens[8].strVal
+            ints = tokens[2..7].map(t => t.intval)
+            lbl = Label(
+              text: tokens[8].strVal,
+              pos: Rect toArr[4, int](ints),
+              what1: ints[4],
+              what2: ints[5])
+
+          result.defs[defi].layers.addLabel layer, lbl
 
         of "gcell":
           let
@@ -216,23 +257,27 @@ func parseMax(content: string): MaxLayoutFile =
         of "bbox":
           let bound = tokens[1..4].map(t => t.intval)
 
-        of "SECTION", "uses", "vMAIN", "vDRC", "vBBOX": discard
+        of "uses":
+          discard
+
+        of "SECTION", "vMAIN", "vDRC", "vBBOX": discard
         else: # in uses
-          case head.strval[0]
+          case h[0]
           of '_': discard
           of '/':
-            let 
-              i = head.strval.find('_')
-              mi = parseMagicIdent(, 1)
-            debugEcho mi
+            let
+              i = h.find('_')
+              mi = parseMaxIdent h[1..<i]
+              tr = toTransform(tokens[1..^1].map(t => t.intval))
+
           else: err "invalid"
 
       of mtkInt: # in layer
-        let bound = toArr[4, int](tokens.map(t => t.intVal))
-
+        let bound: Rect = toArr[4, int](tokens.map(t => t.intVal))
+        result.defs[defi].layers.addRect layer, bound
 
       of mtkCloseBracket, mtkComment: discard
       else: err "invalid node kind: " & $head.kind & ' ' & $head
 
-
-echo parseMax readfile "./dist/max_tutorial/tutorial/NAND2.max"
+import pretty
+print parseMax readfile "./dist/max_tutorial/tutorial/NAND2.max"
