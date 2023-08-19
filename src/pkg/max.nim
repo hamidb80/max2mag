@@ -11,7 +11,7 @@ type
   Rect = array[RectPart, int]
 
   TransformPart = enum
-    a, bb, c, d, e, f
+    a, b, c, d, e, f
 
   Transform = array[TransformPart, int]
 
@@ -217,7 +217,6 @@ func parseMax(content: string): MaxLayoutFile =
     defIdent: MaxIdent
 
   for line in splitLines content:
-    debugEcho line
     if not line.isEmptyOrWhitespace:
       let
         tokens = lex line
@@ -226,7 +225,6 @@ func parseMax(content: string): MaxLayoutFile =
       case head.kind
       of mtkIdent:
         let h = head.strval
-
         case h
         of "max": result.version = tokens[1].intVal
         of "tech": result.tech = tokens[1].strVal
@@ -259,13 +257,15 @@ func parseMax(content: string): MaxLayoutFile =
           result.defs[defi].layers.addLabel layer, lbl
 
         of "gcell":
-          let
-            id = tokens[1].intval
-            instanceName = tokens[2].strVal
+          let id = tokens[1].intval
+          # instanceName = tokens[2].strVal
+
+          result.defs[defi].instances.add Instance(
+            comp: result.defs[id])
 
         of "bbox":
           let bound = toRect tokens[1..4].toInts
-          result.defs[defi].instances[^1].bound = bound # XXX nim 2 does not raise an exception, it quits like C
+          result.defs[defi].instances[^1].bound = bound
 
         of "SECTION", "uses", "vMAIN", "vDRC", "vBBOX": discard
 
@@ -288,7 +288,6 @@ func parseMax(content: string): MaxLayoutFile =
           
           result.defs[defi].instances[^1].uses.add u
 
-
       of mtkInt: # in layer
         let bound = toRect (tokens.toInts)
         result.defs[defi].layers.addRect layer, bound
@@ -297,4 +296,5 @@ func parseMax(content: string): MaxLayoutFile =
       else: err "invalid node kind: " & $head.kind & ' ' & $head
 
 import pretty
-print parseMax readfile "./dist/max_tutorial/tutorial/NAND2.max"
+let m = parseMax readfile "./dist/max_tutorial/tutorial/NAND2.max"
+print m
