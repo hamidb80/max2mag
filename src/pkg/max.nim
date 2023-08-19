@@ -1,6 +1,9 @@
 import std/[strutils, tables, sequtils, options, parseutils, sugar]
 import ./common
 
+import manu
+# matrix lib https://planetis-m.github.io/manu/manu/matrix.html#Matrix
+
 type
   RectPart = enum
     l # left
@@ -14,6 +17,16 @@ type
     a, b, c, d, e, f
 
   Transform = array[TransformPart, int]
+
+  Ratation = enum
+    r0, r90, r180, r270
+
+  TransformKind = object
+    rotate: Ratation
+    isFlipped: bool # flipped upside down (mirror across the x-axis after rotating)
+
+  Translate = object
+    x, y: int
 
   Use = object # TODO what is partial ??
     id: int
