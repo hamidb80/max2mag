@@ -295,6 +295,8 @@ func parseMax(content: string): MaxLayoutFile =
       of mtkCloseBracket, mtkComment: discard
       else: err "invalid node kind: " & $head.kind & ' ' & $head
 
-import pretty
-let m = parseMax readfile "./dist/max_tutorial/tutorial/NAND2.max"
-print m
+
+when isMainModule:
+  import pretty
+  let m = parseMax readfile "./dist/max_tutorial/tutorial/NAND2.max"
+  print m

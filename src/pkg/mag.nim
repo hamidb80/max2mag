@@ -14,11 +14,12 @@ type
     fontSize*: int
     text*: string
 
+  # TODO does order of stored layers matter ??
   MagicLayoutFile* = object
     tech*: string
     timestamp*: int
-    rects*: SeqTable[string, Rect] # TODO does order of stored layers matter ??
-    rlabels*: seq[RLabel]
+    rects*: SeqTable[string, Rect] # layer => seq[rect]
+    rlabels*: seq[RLabel] 
 
 
 func toArr[N: static int, A, B](s: seq[A], fn: proc(a: A): B,
@@ -69,3 +70,9 @@ func `$`*(mag: MagicLayoutFile): string =
       l.position.join(" "), ' ', $l.fontSize, ' ', l.text, '\n'
 
   result.addMulti "<< end >>\n"
+
+
+when isMainModule:
+  import pretty
+  let m = parseMag readFile "./dist/mag-samples/buff101.mag"
+  print m
