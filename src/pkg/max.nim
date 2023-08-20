@@ -26,7 +26,7 @@ type
   # Translate = object
   #   x, y: int
 
-  Use = object # TODO what is partial ??
+  Use = object
     id: int
     ident: Option[string]
     trans: CompactTransform
@@ -46,18 +46,20 @@ type
     name: string
     rects: seq[Rect]
     labels: seq[Label]
+    # POLYGONS
+    # WIREPATH
 
   Component = ref object
     ident: string
     version: int
     layers: Table[string, Layer]
+    instances: seq[Instance] # main & group def can have this section
 
   MaxLayoutFile* = object
     version: int
     tech: string
     resolution: float
     defs: Table[string, Component]
-    instances: seq[Instance]
 
   MaxTokenKind = enum
     mtkComment
@@ -67,7 +69,6 @@ type
     mtkString
     mtkOpenBracket
     mtkCloseBracket
-    mtkSep
 
   MaxToken = object
     case kind: MaxTokenKind
@@ -79,6 +80,33 @@ type
       strVal: string
     else:
       nil
+
+
+func addLayerIfNotExists(layers: var Table[string, Layer], layer: string) =
+  if layer notin layers:
+    layers[layer] = Layer(name: layer)
+
+func addRect(layers: var Table[string, Layer], layer: string, bound: Rect) =
+  addLayerIfNotExists layers, layer
+  layers[layer].rects.add bound
+
+func addLabel(layers: var Table[string, Layer], layer: string, lbl: Label) =
+  addLayerIfNotExists layers, layer
+  layers[layer].labels.add lbl
+
+
+func toArr[N: static int; T](s: seq[T], offset: Natural = 0): array[N, T] =
+  for i in 0 ..< N:
+    result[i] = s[i+offset]
+
+func toTransform(s: seq[int]): CompactTransform =
+  toArr[6, int](s)
+
+func toRect(s: seq[int]): Rect =
+  toArr[4, int](s)
+
+func toInts(s: seq[MaxToken]): seq[int] =
+  s.map(t => t.intval)
 
 
 func parseString(content: string, offset: int, buff: var string): Natural =
@@ -115,18 +143,6 @@ func parseMaxIdent(content: string, offset: int, buff: var string): Natural =
   buff = content[offset..<tail]
   tail - offset
 
-func addLayerIfNotExists(layers: var Table[string, Layer], layer: string) =
-  if layer notin layers:
-    layers[layer] = Layer(name: layer)
-
-func addRect(layers: var Table[string, Layer], layer: string, bound: Rect) =
-  addLayerIfNotExists layers, layer
-  layers[layer].rects.add bound
-
-func addLabel(layers: var Table[string, Layer], layer: string, lbl: Label) =
-  addLayerIfNotExists layers, layer
-  layers[layer].labels.add lbl
-
 func lex(content: string): seq[MaxToken] =
   var
     i = 0
@@ -146,10 +162,6 @@ func lex(content: string): seq[MaxToken] =
     case curr
     of ' ', '\t':
       inc i
-
-    of Newlines:
-      inc i
-      sett MaxToken(kind: mtkSep)
 
     of '{':
       inc i
@@ -186,20 +198,6 @@ func lex(content: string): seq[MaxToken] =
       err "not a valid char: '" & curr & "'"
 
     last = curr
-
-func toArr[N: static int; T](s: seq[T], offset: Natural = 0): array[N, T] =
-  for i in 0 ..< N:
-    result[i] = s[i+offset]
-
-func toTransform(s: seq[int]): CompactTransform =
-  toArr[6, int](s)
-
-func toRect(s: seq[int]): Rect =
-  toArr[4, int](s)
-
-func toInts(s: seq[MaxToken]): seq[int] =
-  s.map(t => t.intval)
-
 
 func parseMaxIdent(s: string): tuple[ident: string, version: Option[int]] =
   let parts = s.split "!-_version!"
@@ -256,12 +254,12 @@ func parseMax(content: string): MaxLayoutFile =
         of "gcell":
           let id = tokens[2].strval
 
-          result.instances.add Instance(
+          result.defs[defName].instances.add Instance(
             comp: result.defs[id])
 
         of "bbox":
           let bound = toRect tokens[1..4].toInts
-          result.instances[^1].bound = bound
+          result.defs[defName].instances[^1].bound = bound
 
         of "SECTION", "uses", "vMAIN", "vDRC", "vBBOX": discard
 
@@ -282,7 +280,7 @@ func parseMax(content: string): MaxLayoutFile =
 
             else: err "invalid"
 
-          result.instances[^1].uses.add u
+          result.defs[defName].instances[^1].uses.add u
 
       of mtkInt: # in layer
         let bound = toRect (tokens.toInts)
