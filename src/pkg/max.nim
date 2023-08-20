@@ -1,8 +1,6 @@
 import std/[strutils, tables, sequtils, options, parseutils, sugar]
 import ./common
 
-import manu
-# matrix lib https://planetis-m.github.io/manu/manu/matrix.html#Matrix
 
 type
   RectPart = enum
@@ -13,25 +11,25 @@ type
 
   Rect = array[RectPart, int]
 
-  TransformPart = enum
+  CompactTransformPart = enum
     a, b, c, d, e, f
 
-  Transform = array[TransformPart, int]
+  CompactTransform = array[CompactTransformPart, int]
 
-  Ratation = enum
-    r0, r90, r180, r270
+  # Ratation = enum
+  #   r0, r90, r180, r270
 
-  TransformKind = object
-    rotate: Ratation
-    isFlipped: bool # flipped upside down (mirror across the x-axis after rotating)
+  # TransformKind = object
+  #   rotate: Ratation
+  #   isFlipped: bool # flipped upside down (mirror across the x-axis after rotating)
 
-  Translate = object
-    x, y: int
+  # Translate = object
+  #   x, y: int
 
   Use = object # TODO what is partial ??
     id: int
-    ident: Option[MaxIdent]
-    trans: Transform
+    ident: Option[string]
+    trans: CompactTransform
 
   Instance = ref object
     comp: Component
@@ -49,21 +47,17 @@ type
     rects: seq[Rect]
     labels: seq[Label]
 
-  MaxIdent = object
-    name: string
-    params: Table[string, string]
-
   Component = ref object
-    ident: MaxIdent
+    ident: string
+    version: int
     layers: Table[string, Layer]
-    instances: seq[Instance]
-    # versions ??
 
   MaxLayoutFile* = object
     version: int
     tech: string
     resolution: float
-    defs: Table[int, Component]
+    defs: Table[string, Component]
+    instances: seq[Instance]
 
   MaxTokenKind = enum
     mtkComment
@@ -91,15 +85,6 @@ func parseString(content: string, offset: int, buff: var string): Natural =
   let i = content.find('"', offset + 1)
   buff = content[offset+1 ..< i]
   i - offset + 1
-
-func parseComment(content: string, offset: int, buff: var string): Natural =
-  let i = block:
-    let t = content.find('\n', offset)
-    if t == -1: content.len
-    else: t
-
-  buff = content[offset+1 ..< i]
-  i - offset
 
 func parseNumber(content: string, offset: int,
   buffi: var int, bufff: var float, isFloat: var bool): Natural =
@@ -176,8 +161,8 @@ func lex(content: string): seq[MaxToken] =
 
     of '#':
       if last == '\n':
-        inc i, parseComment(content, i, buffs)
-        sett MaxToken(kind: mtkComment, strval: buffs)
+        inc i, content.len
+        sett MaxToken(kind: mtkComment, strval: content)
       else:
         inc i, parseMaxIdent(content, i, buffs)
         sett MaxToken(kind: mtkIdent, strval: buffs)
@@ -206,28 +191,27 @@ func toArr[N: static int; T](s: seq[T], offset: Natural = 0): array[N, T] =
   for i in 0 ..< N:
     result[i] = s[i+offset]
 
-func toTransform(s: seq[int]): Transform =
-  assert s.len == 6
-  Transform toArr[6, int](s)
+func toTransform(s: seq[int]): CompactTransform =
+  toArr[6, int](s)
+
+func toRect(s: seq[int]): Rect =
+  toArr[4, int](s)
 
 func toInts(s: seq[MaxToken]): seq[int] =
   s.map(t => t.intval)
 
-func toRect(s: seq[int]): Rect = 
-  toArr[4, int](s)
 
-
-func parseMaxIdent(s: string): MaxIdent =
-  let parts = s.split '!'
-  result.name = parts[0][1..^1]
-  for i in countup(1, parts.high, 2):
-    result.params[parts[i][1..^1]] = parts[i+1]
+func parseMaxIdent(s: string): tuple[ident: string, version: Option[int]] =
+  let parts = s.split "!-_version!"
+  result.ident = parts[0]
+  if parts.len == 2:
+    result.version = some parseInt parts[1]
 
 func parseMax(content: string): MaxLayoutFile =
   var
     layer = ""
-    defi = 0
-    defIdent: MaxIdent
+    defVer = 0
+    defName: string
 
   for line in splitLines content:
     if not line.isEmptyOrWhitespace:
@@ -243,16 +227,16 @@ func parseMax(content: string): MaxLayoutFile =
         of "tech": result.tech = tokens[1].strVal
         of "resolution": result.resolution = tokens[1].floatVal
         of "DEF":
-          (defi, defIdent) =
+          (defName, defVer) =
             case tokens.len
-            of 1: (0, MaxIdent())
-            of 4:
+            of 1: ("", 0)
+            of 4: 
               let c = parseMaxIdent tokens[1].strval
-              (c.params["_version"].parseInt, c)
+              (c.ident, c.version.get)
             else:
               err "what??"
 
-          result.defs[defi] = Component(ident: defIdent)
+          result.defs[defName] = Component(ident: defName, version: defVer)
 
         of "layer":
           layer = tokens[1].strval
@@ -267,18 +251,17 @@ func parseMax(content: string): MaxLayoutFile =
               what1: ints[4],
               what2: ints[5])
 
-          result.defs[defi].layers.addLabel layer, lbl
+          result.defs[defName].layers.addLabel layer, lbl
 
         of "gcell":
-          let id = tokens[1].intval
-          # instanceName = tokens[2].strVal
+          let id = tokens[2].strval
 
-          result.defs[defi].instances.add Instance(
+          result.instances.add Instance(
             comp: result.defs[id])
 
         of "bbox":
           let bound = toRect tokens[1..4].toInts
-          result.defs[defi].instances[^1].bound = bound
+          result.instances[^1].bound = bound
 
         of "SECTION", "uses", "vMAIN", "vDRC", "vBBOX": discard
 
@@ -286,24 +269,24 @@ func parseMax(content: string): MaxLayoutFile =
           var u: Use
           (u.id, u.ident, u.trans) =
             case h[0]
-            of '_': 
-              (parseInt h[1..^1], 
-                none MaxIdent, 
+            of '_':
+              (parseInt h[1..^1],
+                none string,
                 toTransform(tokens[1..^1].toInts))
 
             of '/':
               let i = h.find('_')
-              (parseInt h[i+1..^1], 
-                some parseMaxIdent h[1..<i], 
+              (parseInt h[i+1..^1],
+                some (parseMaxIdent h[1..<i]).ident,
                 toTransform(tokens[1..^1].toInts))
 
             else: err "invalid"
-          
-          result.defs[defi].instances[^1].uses.add u
+
+          result.instances[^1].uses.add u
 
       of mtkInt: # in layer
         let bound = toRect (tokens.toInts)
-        result.defs[defi].layers.addRect layer, bound
+        result.defs[defName].layers.addRect layer, bound
 
       of mtkCloseBracket, mtkComment: discard
       else: err "invalid node kind: " & $head.kind & ' ' & $head
