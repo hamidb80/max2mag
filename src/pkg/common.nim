@@ -32,13 +32,14 @@ type
   Array* = array[ArrayParts, int]
 
 
-template `>>`*(lable, typee): untyped = 
+template `>>`*(lable, typee): untyped =
   ## type annonator
   typee
 
 template err*(msg): untyped =
   raise newException(ValueError, msg)
 
+# FIXME addfmt
 macro addMulti*(container: untyped, values: varargs[untyped]): untyped =
   result = newStmtList()
   for v in values:
@@ -51,7 +52,7 @@ func toArr*[N: static int; T](s: seq[T], offset: Natural = 0): array[N, T] =
     result[i] = s[i+offset]
 
 func toArrMap*[N: static int, A, B](
-  s: seq[A], 
+  s: seq[A],
   fn: proc(a: A): B,
   offset: Natural
 ): array[N, B] {.effectsOf: fn.} =
@@ -59,6 +60,6 @@ func toArrMap*[N: static int, A, B](
     result[i] = fn s[i+offset]
 
 
-func `or`*(a,b: string): string = 
+template `or`*(a, b: string): string =
   if a == "": b
   else: a

@@ -36,7 +36,7 @@ type
     # POLYGONS
     # WIREPATH
 
-  LayerTable = Table[layer >> string, Layer]
+  LayerTable = OrderedTable[layer >> string, Layer]
 
   Component* = ref object
     ident*: string
@@ -44,11 +44,13 @@ type
     layers*: LayerTable
     instances*: seq[Instance] # main & group def can have this section
 
+  DefineTable = Table[defIdent >> string, Component]
+
   MaxLayout* = object
     version*: int
     tech*: string
     resolution*: float
-    defs*: Table[defIdent >> string, Component]
+    defs*: DefineTable
 
   MaxTokenKind* = enum
     mtkComment

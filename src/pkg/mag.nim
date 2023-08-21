@@ -14,14 +14,14 @@ type
   RLabel* = object
     layer*: string
     position*: Rect
-    fontSize*: int
+    kind*: int # TODO
     text*: string
 
   # TODO does order of stored layers matter ??
   MagLayout* = object
     tech*: string
     timestamp*: int
-    rects*: SeqTable[layer >> string, Rect]
+    rects*: OrderedSeqTable[layer >> string, Rect]
     rlabels*: seq[RLabel]
     uses*: seq[Use]
 
@@ -44,13 +44,13 @@ func parseMag*(content: string): MagLayout =
           result.timestamp = t
         else:
           result.uses[^1].timestamp = t
-      of "array": 
+      of "array":
         result.uses[^1].array = some toArrMap[6, string, int](parts, parseInt, 1)
-      of "box": 
+      of "box":
         result.uses[^1].box = toArrMap[4, string, int](parts, parseInt, 1)
-      of "transform": 
+      of "transform":
         result.uses[^1].transform = toArrMap[6, string, int](parts, parseInt, 1)
-      of "use": 
+      of "use":
         result.uses.add Use(cell: parts[1], name: parts[2])
       of "rect":
         let r = Rect toArrMap[4, string, int](parts, parseInt, 1)
@@ -59,7 +59,7 @@ func parseMag*(content: string): MagLayout =
         result.rlabels.add RLabel(
           layer: parts[1],
           position: Rect toArrMap[4, string, int](parts, parseInt, 2),
-          fontSize: parseint parts[6],
+          kind: parseint parts[6],
           text: parts[7])
 
       else: err fmt"invalid command '{parts[0]}'"
@@ -79,7 +79,7 @@ func `$`*(mag: MagLayout): string =
 
   for l in mag.rlabels:
     result.addMulti "rlabel ", l.layer, ' ',
-      l.position.join(" "), ' ', $l.fontSize, ' ', l.text, '\n'
+      l.position.join(" "), ' ', $l.kind, ' ', l.text, '\n'
 
   for u in mag.uses:
     result.addMulti "use ", u.cell, ' ', u.name, '\n'

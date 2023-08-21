@@ -2,12 +2,8 @@ import std/[unittest, tables, os, sequtils]
 import pretty
 import ../src/pkg/[max, mag, bridge]
 
-proc refreshDir(path: string) = 
-  if dirExists path:
-    removeDir path
-  createDir path
 
-refreshDir "./temp"
+discard existsOrCreateDir "./temp"
 
 # test "max":
 #   # let m = parseMax readfile "./dist/max_tutorial/tutorial/NAND2.max"
@@ -19,13 +15,16 @@ refreshDir "./temp"
 #   print m
 
 test "max -> mag":
-  let 
-    max = parseMax readfile "./dist/tut/array.max"
-    magTable = toMag(max, "array")
-  
-  # print max
-  # print magTable.keys.toseq
-  for cell, layout in magTable:
-    writeFile "./temp" / (cell & ".mag"), $layout
-    # echo $layout
-    
+  for p in [
+    "./dist/tut/array.max",
+    "./dist/inv-buff/micro-magic/Buf.max"
+  ]:
+    let 
+      pff = splitFile p
+      max = parseMax readfile p
+      magTable = toMag(max, pff.name)
+
+    copyFile p, "./temp" / pff.name & pff.ext
+    for cell, layout in magTable:
+      writeFile "./temp" / cell & ".mag", $layout
+      

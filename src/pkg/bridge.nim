@@ -5,6 +5,13 @@ import ./[max, mag, common]
 func toMax*(mag: MagLayout): MaxLayout =
   discard
 
+func toMagLayer(l: string): string = 
+  case l
+  of "pdif": "pdiff"
+  of "ndif": "ndiff"
+  of "ct": "pcontact"
+  else: l
+
 func toMag(s: string): string =
   var lastc = '_'
   for c in s:
@@ -22,7 +29,7 @@ func toMag(label: Label, layer: string): RLabel =
   RLabel(
     layer: layer,
     position: label.pos,
-    fontSize: 1,
+    kind: label.kind.int,
     text: label.text)
 
 func toMag(use: max.Use, ins: Instance): mag.Use =
@@ -36,13 +43,14 @@ func toMag(use: max.Use, ins: Instance): mag.Use =
 func toMag*(max: MaxLayout, mainCell: string): MagLayoutTable =
   for name, component in max.defs:
     var mag = MagLayout()
-    mag.tech = max.tech
+    mag.tech = "scmos" or max.tech
     mag.timestamp = component.version
 
     for lname, layer in component.layers:
-      mag.rects[lname] = layer.rects
+      let l = toMagLayer lname
+      mag.rects[l] = layer.rects
       for lbl in layer.labels:
-        mag.rlabels.add toMag(lbl, lname)
+        mag.rlabels.add toMag(lbl, l)
 
     for ins in component.instances:
       for u in ins.uses:
