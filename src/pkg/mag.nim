@@ -25,7 +25,7 @@ type
     rlabels*: seq[RLabel]
     uses*: seq[Use]
 
-  MagLayoutTable* = Table[cellName >> string, MagLayout]
+  MagLayoutLookup* = Table[cellName >> string, MagLayout]
 
 
 func parseMag*(content: string): MagLayout =

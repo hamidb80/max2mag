@@ -1,11 +1,17 @@
-import std/[tables, strutils]
+import std/[tables, strutils, paths, os]
 import ./[max, mag, common]
 
+proc loadDeps*(
+    mll: var MagLayoutLookup, 
+    depsLayouts: seq[string],
+    searchPaths: seq[Path]) = 
+    discard
 
-func toMax*(mag: MagLayout): MaxLayout =
+func toMax*(mag: MagLayoutLookup, mainLayout: string): MaxLayout =
   discard
 
-func toMagLayer(l: string): string = 
+
+func toMagLayer(l: string): string =
   case l
   of "pdif": "pdiff"
   of "ndif": "ndiff"
@@ -15,11 +21,11 @@ func toMagLayer(l: string): string =
 func toMag(s: string): string =
   var lastc = '_'
   for c in s:
-    let newc = 
+    let newc =
       case c
       of Letters, Digits, '_': c
       else: '_'
-    
+
     if not (newc == '_' and lastc == '_'):
       result.add newc
 
@@ -40,10 +46,10 @@ func toMag(use: max.Use, ins: Instance): mag.Use =
   result.array = use.array
   result.timestamp = ins.comp.version
 
-func toMag*(max: MaxLayout, mainCell: string): MagLayoutTable =
+func toMag*(max: MaxLayout, mainLayout: string): MagLayoutLookup =
   for name, component in max.defs:
     var mag = MagLayout()
-    mag.tech = "scmos" or max.tech
+    mag.tech = "scmos" or max.tech # FIXME
     mag.timestamp = component.version
 
     for lname, layer in component.layers:
@@ -56,4 +62,4 @@ func toMag*(max: MaxLayout, mainCell: string): MagLayoutTable =
       for u in ins.uses:
         mag.uses.add toMag(u, ins)
 
-    result[toMag(name or mainCell)] = mag
+    result[toMag(name or mainLayout)] = mag
