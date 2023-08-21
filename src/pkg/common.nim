@@ -20,17 +20,21 @@ type
     w  # GEO_WEST
     nw # GEO_NORTHWEST
 
+  CompactTransformPart* = enum
+    a, b, c, d, e, f
 
-  # Ratation = enum
-  #   r0, r90, r180, r270
+  CompactTransform* = array[CompactTransformPart, int]
 
-  # TransformKind = object
-  #   rotate: Ratation
-  #   isFlipped: bool # flipped upside down (mirror across the x-axis after rotating)
+  ArrayParts* = enum
+    xlow, xhigh, xsep
+    ylow, yhigh, ysep
 
-  # Translate = object
-  #   x, y: int
+  Array* = array[ArrayParts, int]
 
+
+template `>>`*(lable, typee): untyped = 
+  ## type annonator
+  typee
 
 template err*(msg): untyped =
   raise newException(ValueError, msg)
@@ -53,3 +57,8 @@ func toArrMap*[N: static int, A, B](
 ): array[N, B] {.effectsOf: fn.} =
   for i in 0 ..< result.len:
     result[i] = fn s[i+offset]
+
+
+func `or`*(a,b: string): string = 
+  if a == "": b
+  else: a

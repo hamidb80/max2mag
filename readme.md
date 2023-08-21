@@ -18,14 +18,18 @@ the units are converted to something physical
 
 #### commands
 ```bash
-grep -r -h -o --include="*.mag" '^\w\+' | uniq  
+grep -r -h -o --include="*.mag" '^\w\+' | sort -u 
 ```
 ```
+array
+box
 magic
 rect
 rlabel
 tech
 timestamp
+transform
+use
 ```
 
 ### .max
@@ -165,4 +169,9 @@ typedef struct
 {
     int t_a, t_b, t_c, t_d, t_e, t_f;
 } Transform;
+```
+
+array
+```
+	&xlo, &xhi, &xsep, &ylo, &yhi, &ysep
 ```

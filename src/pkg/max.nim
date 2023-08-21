@@ -1,13 +1,18 @@
-import std/[strutils, tables, sequtils, options, parseutils, sugar]
+import std/[strutils, tables, sequtils, options, parseutils]
 import ./common
 
 
 type
-  CompactTransformPart* = enum
-    a, b, c, d, e, f
+  Use* = object
+    id*: string
+    trans*: CompactTransform
+    array*: Option[Array]
 
-  CompactTransform* = array[CompactTransformPart, int]
-
+  Instance* = ref object
+    comp*: Component
+    bound*: Rect
+    uses*: seq[Use]
+  
   LabelKind* = enum
     lComment
     lHidden
@@ -18,21 +23,11 @@ type
     lInOut
     lMaxKind
 
-  Use* = object
-    id*: string
-    trans*: CompactTransform
-    # array*: Option[..
-
-  Instance* = ref object
-    comp*: Component
-    bound*: Rect
-    uses*: seq[Use]
-
   Label* = object
     pos*: Rect
     text*: string
-    orient*: int
-    kind*: int
+    orient*: Align
+    kind*: LabelKind
 
   Layer* = object
     name*: string
@@ -41,17 +36,19 @@ type
     # POLYGONS
     # WIREPATH
 
+  LayerTable = Table[layer >> string, Layer]
+
   Component* = ref object
     ident*: string
     version*: int
-    layers*: Table[string, Layer]
+    layers*: LayerTable
     instances*: seq[Instance] # main & group def can have this section
 
   MaxLayout* = object
     version*: int
     tech*: string
     resolution*: float
-    defs*: Table[string, Component]
+    defs*: Table[defIdent >> string, Component]
 
   MaxTokenKind* = enum
     mtkComment
@@ -74,27 +71,27 @@ type
       nil
 
 
-func addLayerIfNotExists(layers: var Table[string, Layer], layer: string) =
+func addLayerIfNotExists(layers: var LayerTable, layer: string) =
   if layer notin layers:
     layers[layer] = Layer(name: layer)
 
-func addRect(layers: var Table[string, Layer], layer: string, bound: Rect) =
+func addRect(layers: var LayerTable, layer: string, bound: Rect) =
   addLayerIfNotExists layers, layer
   layers[layer].rects.add bound
 
-func addLabel(layers: var Table[string, Layer], layer: string, lbl: Label) =
+func addLabel(layers: var LayerTable, layer: string, lbl: Label) =
   addLayerIfNotExists layers, layer
   layers[layer].labels.add lbl
 
 
-func toTransform(s: seq[int]): CompactTransform =
-  toArr[6, int](s)
-
 func toRect(s: seq[int]): Rect =
   toArr[4, int](s)
 
-func toInts(s: seq[MaxToken]): seq[int] =
-  s.map(t => t.intval)
+func getInt(mt: MaxToken): int =
+  mt.intval
+
+func toInts(mts: seq[MaxToken]): seq[int] =
+  mts.map getInt
 
 
 func parseString(content: string, offset: int, buff: var string): Natural =
@@ -234,9 +231,9 @@ func parseMax*(content: string): MaxLayout =
             ints = tokens[2..7].toInts
             lbl = Label(
               text: tokens[8].strVal,
-              pos: toRect(ints),
-              orient: ints[4],
-              kind: ints[5])
+              pos: toRect ints,
+              orient: Align ints[4],
+              kind: LabelKind ints[5])
 
           result.defs[defName].layers.addLabel layer, lbl
 
@@ -247,25 +244,31 @@ func parseMax*(content: string): MaxLayout =
             comp: result.defs[id])
 
         of "bbox":
-          let bound = toRect tokens[1..4].toInts
+          let bound = toArrMap[4, MaxToken, int](tokens, getInt, 1)
           result.defs[defName].instances[^1].bound = bound
 
-        of "SECTION", "uses", "vMAIN", "vDRC", "vBBOX": discard
+        of "SECTION", "uses": discard
+        of "vMAIN", "vDRC", "vBBOX": 
+          result.defs[""].version = tokens[1].intVal
 
         else: # in uses
+          let arr =
+            if tokens.len > 7:
+              assert tokens[7].strval == "array"
+              some Array toArrMap[6, MaxToken, int](tokens, getInt, 8)
+            else:
+              none Array
           result.defs[defName].instances[^1].uses.add Use(
             id: h,
-            trans: toTransform(tokens[1..^1].toInts)) # TODO array
+            trans: toArrMap[6, MaxToken, int](tokens, getInt, 1),
+            array: arr)
 
       of mtkInt: # in layer
-        let bound = toRect (tokens.toInts)
+        let bound = toRect tokens.toInts
         result.defs[defName].layers.addRect layer, bound
 
       of mtkCloseBracket, mtkComment: discard
       else: err "invalid node kind: " & $head.kind & ' ' & $head
 
-
-when isMainModule:
-  import pretty
-  let m = parseMax readfile "./dist/max_tutorial/tutorial/NAND2.max"
-  print m
+# func `$`(layout: MaxLayout): string = 
+#   discard

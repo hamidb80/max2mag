@@ -1,12 +1,15 @@
-import std/[tables, strformat, strutils]
+import std/[tables, strformat, strutils, options]
 import ./[types, common]
 
 
 type
-  RectArray* = enum
-    x1, y1, x2, y2
-
-  Rect* = array[RectArray, int]
+  Use* = object
+    cell*: string
+    name*: string
+    timestamp*: int
+    transform*: CompactTransform
+    box*: Rect
+    array*: Option[Array]
 
   RLabel* = object
     layer*: string
@@ -18,8 +21,11 @@ type
   MagLayout* = object
     tech*: string
     timestamp*: int
-    rects*: SeqTable[string, Rect] # layer => seq[rect]
-    rlabels*: seq[RLabel] 
+    rects*: SeqTable[layer >> string, Rect]
+    rlabels*: seq[RLabel]
+    uses*: seq[Use]
+
+  MagLayoutTable* = Table[cellName >> string, MagLayout]
 
 
 func parseMag*(content: string): MagLayout =
@@ -31,8 +37,21 @@ func parseMag*(content: string): MagLayout =
       case parts[0]
       of "magic": discard
       of "tech": result.tech = parts[1]
-      of "timestamp": result.timestamp = parseInt parts[1]
       of "<<": lastLayer = parts[1]
+      of "timestamp":
+        let t = parseInt parts[1]
+        if result.uses.len == 0:
+          result.timestamp = t
+        else:
+          result.uses[^1].timestamp = t
+      of "array": 
+        result.uses[^1].array = some toArrMap[6, string, int](parts, parseInt, 1)
+      of "box": 
+        result.uses[^1].box = toArrMap[4, string, int](parts, parseInt, 1)
+      of "transform": 
+        result.uses[^1].transform = toArrMap[6, string, int](parts, parseInt, 1)
+      of "use": 
+        result.uses.add Use(cell: parts[1], name: parts[2])
       of "rect":
         let r = Rect toArrMap[4, string, int](parts, parseInt, 1)
         result.rects.add lastLayer, r
@@ -62,10 +81,14 @@ func `$`*(mag: MagLayout): string =
     result.addMulti "rlabel ", l.layer, ' ',
       l.position.join(" "), ' ', $l.fontSize, ' ', l.text, '\n'
 
+  for u in mag.uses:
+    result.addMulti "use ", u.cell, ' ', u.name, '\n'
+
+    if isSome u.array:
+      result.addMulti "array ", u.array.get.join(" "), '\n'
+
+    result.addMulti "timestamp ", $u.timestamp, '\n'
+    result.addMulti "transform ", $u.transform.join(" "), '\n'
+    result.addMulti "box ", u.box.join(" "), '\n'
+
   result.addMulti "<< end >>\n"
-
-
-when isMainModule:
-  import pretty
-  let m = parseMag readFile "./dist/mag-samples/buff101.mag"
-  print m
