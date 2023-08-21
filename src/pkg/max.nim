@@ -3,65 +3,57 @@ import ./common
 
 
 type
-  RectPart = enum
-    l # left
-    b # bottom
-    r # right
-    t # top
-
-  Rect = array[RectPart, int]
-
-  CompactTransformPart = enum
+  CompactTransformPart* = enum
     a, b, c, d, e, f
 
-  CompactTransform = array[CompactTransformPart, int]
+  CompactTransform* = array[CompactTransformPart, int]
 
-  # Ratation = enum
-  #   r0, r90, r180, r270
+  LabelKind* = enum
+    lComment
+    lHidden
+    lLocal
+    lGlobal
+    lInput
+    lOutput
+    lInOut
+    lMaxKind
 
-  # TransformKind = object
-  #   rotate: Ratation
-  #   isFlipped: bool # flipped upside down (mirror across the x-axis after rotating)
+  Use* = object
+    id*: string
+    trans*: CompactTransform
+    # array*: Option[..
 
-  # Translate = object
-  #   x, y: int
+  Instance* = ref object
+    comp*: Component
+    bound*: Rect
+    uses*: seq[Use]
 
-  Use = object
-    id: int
-    ident: Option[string]
-    trans: CompactTransform
+  Label* = object
+    pos*: Rect
+    text*: string
+    orient*: int
+    kind*: int
 
-  Instance = ref object
-    comp: Component
-    bound: Rect
-    uses: seq[Use]
-
-  Label = object
-    pos: Rect
-    text: string
-    what1: int
-    what2: int
-
-  Layer = object
-    name: string
-    rects: seq[Rect]
-    labels: seq[Label]
+  Layer* = object
+    name*: string
+    rects*: seq[Rect]
+    labels*: seq[Label]
     # POLYGONS
     # WIREPATH
 
-  Component = ref object
-    ident: string
-    version: int
-    layers: Table[string, Layer]
-    instances: seq[Instance] # main & group def can have this section
+  Component* = ref object
+    ident*: string
+    version*: int
+    layers*: Table[string, Layer]
+    instances*: seq[Instance] # main & group def can have this section
 
   MaxLayoutFile* = object
-    version: int
-    tech: string
-    resolution: float
-    defs: Table[string, Component]
+    version*: int
+    tech*: string
+    resolution*: float
+    defs*: Table[string, Component]
 
-  MaxTokenKind = enum
+  MaxTokenKind* = enum
     mtkComment
     mtkInt
     mtkFloat
@@ -70,14 +62,14 @@ type
     mtkOpenBracket
     mtkCloseBracket
 
-  MaxToken = object
-    case kind: MaxTokenKind
+  MaxToken* = object
+    case kind*: MaxTokenKind
     of mtkInt:
-      intVal: int
+      intVal*: int
     of mtkFloat:
-      floatVal: float
+      floatVal*: float
     of mtkString, mtkIdent, mtkComment:
-      strVal: string
+      strVal*: string
     else:
       nil
 
@@ -199,7 +191,7 @@ func lex(content: string): seq[MaxToken] =
 
     last = curr
 
-func parseMaxIdent(s: string): tuple[ident: string, version: Option[int]] =
+func splitMaxIdent(s: string): tuple[ident: string, version: Option[int]] =
   let parts = s.split "!-_version!"
   result.ident = parts[0]
   if parts.len == 2:
@@ -228,8 +220,8 @@ func parseMax(content: string): MaxLayoutFile =
           (defName, defVer) =
             case tokens.len
             of 1: ("", 0)
-            of 4: 
-              let c = parseMaxIdent tokens[1].strval
+            of 4:
+              let c = splitMaxIdent tokens[1].strval
               (c.ident, c.version.get)
             else:
               err "what??"
@@ -246,8 +238,8 @@ func parseMax(content: string): MaxLayoutFile =
             lbl = Label(
               text: tokens[8].strVal,
               pos: toRect(ints),
-              what1: ints[4],
-              what2: ints[5])
+              orient: ints[4],
+              kind: ints[5])
 
           result.defs[defName].layers.addLabel layer, lbl
 
@@ -264,23 +256,9 @@ func parseMax(content: string): MaxLayoutFile =
         of "SECTION", "uses", "vMAIN", "vDRC", "vBBOX": discard
 
         else: # in uses
-          var u: Use
-          (u.id, u.ident, u.trans) =
-            case h[0]
-            of '_':
-              (parseInt h[1..^1],
-                none string,
-                toTransform(tokens[1..^1].toInts))
-
-            of '/':
-              let i = h.find('_')
-              (parseInt h[i+1..^1],
-                some (parseMaxIdent h[1..<i]).ident,
-                toTransform(tokens[1..^1].toInts))
-
-            else: err "invalid"
-
-          result.defs[defName].instances[^1].uses.add u
+          result.defs[defName].instances[^1].uses.add Use(
+            id: h,
+            trans: toTransform(tokens[1..^1].toInts)) # TODO array
 
       of mtkInt: # in layer
         let bound = toRect (tokens.toInts)
