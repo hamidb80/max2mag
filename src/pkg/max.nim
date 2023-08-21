@@ -47,7 +47,7 @@ type
     layers*: Table[string, Layer]
     instances*: seq[Instance] # main & group def can have this section
 
-  MaxLayoutFile* = object
+  MaxLayout* = object
     version*: int
     tech*: string
     resolution*: float
@@ -86,10 +86,6 @@ func addLabel(layers: var Table[string, Layer], layer: string, lbl: Label) =
   addLayerIfNotExists layers, layer
   layers[layer].labels.add lbl
 
-
-func toArr[N: static int; T](s: seq[T], offset: Natural = 0): array[N, T] =
-  for i in 0 ..< N:
-    result[i] = s[i+offset]
 
 func toTransform(s: seq[int]): CompactTransform =
   toArr[6, int](s)
@@ -191,13 +187,14 @@ func lex(content: string): seq[MaxToken] =
 
     last = curr
 
+
 func splitMaxIdent(s: string): tuple[ident: string, version: Option[int]] =
   let parts = s.split "!-_version!"
   result.ident = parts[0]
   if parts.len == 2:
     result.version = some parseInt parts[1]
 
-func parseMax(content: string): MaxLayoutFile =
+func parseMax*(content: string): MaxLayout =
   var
     layer = ""
     defVer = 0

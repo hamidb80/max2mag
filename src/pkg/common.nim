@@ -40,3 +40,16 @@ macro addMulti*(container: untyped, values: varargs[untyped]): untyped =
   for v in values:
     result.add quote do:
       `container`.add `v`
+
+
+func toArr*[N: static int; T](s: seq[T], offset: Natural = 0): array[N, T] =
+  for i in 0 ..< N:
+    result[i] = s[i+offset]
+
+func toArrMap*[N: static int, A, B](
+  s: seq[A], 
+  fn: proc(a: A): B,
+  offset: Natural
+): array[N, B] {.effectsOf: fn.} =
+  for i in 0 ..< result.len:
+    result[i] = fn s[i+offset]

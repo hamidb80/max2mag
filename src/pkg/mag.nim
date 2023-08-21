@@ -15,21 +15,14 @@ type
     text*: string
 
   # TODO does order of stored layers matter ??
-  MagicLayoutFile* = object
+  MagLayout* = object
     tech*: string
     timestamp*: int
     rects*: SeqTable[string, Rect] # layer => seq[rect]
     rlabels*: seq[RLabel] 
 
 
-func toArr[N: static int, A, B](s: seq[A], fn: proc(a: A): B,
-    offset: Natural): array[N, B] {.effectsOf: fn.} =
-  assert offset + result.len <= s.len
-  for i in 0 ..< result.len:
-    result[i] = fn s[i+offset]
-
-
-func parseMag*(content: string): MagicLayoutFile =
+func parseMag*(content: string): MagLayout =
   var lastLayer = ""
 
   for line in content.splitLines:
@@ -41,18 +34,18 @@ func parseMag*(content: string): MagicLayoutFile =
       of "timestamp": result.timestamp = parseInt parts[1]
       of "<<": lastLayer = parts[1]
       of "rect":
-        let r = Rect toArr[4, string, int](parts, parseInt, 1)
+        let r = Rect toArrMap[4, string, int](parts, parseInt, 1)
         result.rects.add lastLayer, r
       of "rlabel":
         result.rlabels.add RLabel(
           layer: parts[1],
-          position: Rect toArr[4, string, int](parts, parseInt, 2),
+          position: Rect toArrMap[4, string, int](parts, parseInt, 2),
           fontSize: parseint parts[6],
           text: parts[7])
 
       else: err fmt"invalid command '{parts[0]}'"
 
-func `$`*(mag: MagicLayoutFile): string =
+func `$`*(mag: MagLayout): string =
   result.addMulti "magic", '\n'
   result.addMulti "tech ", mag.tech, '\n'
   result.addMulti "timestamp ", $mag.timestamp, '\n'
