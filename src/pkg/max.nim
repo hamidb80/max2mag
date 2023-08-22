@@ -1,10 +1,10 @@
-import std/[strutils, tables, sequtils, options, parseutils]
+import std/[tables, sequtils, options, strutils, parseutils, strformat]
 import ./common
 
 
 type
   Use* = object
-    id*: string
+    ident*: string
     trans*: CompactTransform
     array*: Option[Array]
 
@@ -39,7 +39,7 @@ type
   LayerTable = OrderedTable[layer >> string, Layer]
 
   Component* = ref object
-    ident*: string
+    ident*, showName*, insName*: string
     version*: int
     layers*: LayerTable
     instances*: seq[Instance] # main & group def can have this section
@@ -222,7 +222,11 @@ func parseMax*(content: string): MaxLayout =
             else:
               err "what??"
 
-          result.defs[defName] = Component(ident: defName, version: defVer)
+          result.defs[defName] = Component(
+            ident: defName,
+            showName: iff(tokens.len == 4, tokens[2].strVal, ""),
+            insName: iff(tokens.len == 4, tokens[3].strVal, ""),
+            version: defVer)
 
         of "layer":
           layer = tokens[1].strval
@@ -261,7 +265,7 @@ func parseMax*(content: string): MaxLayout =
             else:
               none Array
           result.defs[defName].instances[^1].uses.add Use(
-            id: h,
+            ident: h,
             trans: toArrMap[6, MaxToken, int](tokens, getInt, 1),
             array: arr)
 
@@ -273,5 +277,58 @@ func parseMax*(content: string): MaxLayout =
       else: err "invalid node kind: " & $head.kind & ' ' & $head
 
 
-func `$`*(layout: MaxLayout): string = # TODO
-  discard
+func `$`*(layout: MaxLayout): string =
+  result.add "# This file is created by max2mag tool\n\n"
+  result.add fmt "max {layout.version}\n"
+  result.add fmt "tech {layout.tech}\n"
+  result.add fmt "resolution {layout.resolution}\n"
+
+  proc addDef(buff: var string, d: Component, isMainDef: bool) =
+    buff.add "\n\n"
+    if isMainDef: # main section
+      buff.add "DEF\n"
+      buff.add "\nSECTION VERSIONS {\n"
+      buff.add fmt "vMAIN {d.version} 1\n"
+      buff.add fmt "vDRC {d.version} 1\n"
+      buff.add fmt "vBBOX {d.version} 1\n"
+      buff.add "} SECTION VERSIONS\n"
+    else:
+      buff.add fmt "DEF {d.ident} \"{d.showName}\" \"{d.insName}\"\n"
+
+    buff.add "\nSECTION RECTS {\n"
+    for lname, layer in d.layers:
+      buff.add fmt "layer {lname}\n"
+      for r in layer.rects:
+        buff.add fmt "{joinSpaces r}\n"
+    buff.add "} SECTION RECTS\n"
+
+    buff.add "\nSECTION LABELS {\n"
+    for lname, layer in d.layers:
+      for lbl in layer.labels:
+        buff.add fmt "lab {lname} {joinSpaces lbl.pos} {lbl.orient.int} {lbl.kind.int} \"{lbl.text}\"\n"
+    buff.add "} SECTION LABELS\n"
+
+    # buff.add "\nSECTION GROUPS {\n"
+    # buff.add "} SECTION GROUPS\n"
+
+    if d.instances.len != 0:
+      buff.add "\nSECTION INSTANCES {\n"
+
+      for ins in d.instances:
+        buff.add fmt "gcell {ins.comp.version} {ins.comp.ident}\n"
+        buff.add fmt "bbox {joinSpaces ins.bound}\n"
+        buff.add "uses {\n"
+        for u in ins.uses:
+          buff.add fmt "\t{u.ident} {joinSpaces u.trans}"
+          if issome u.array:
+            buff.add fmt " array {joinSpaces u.array.get}\n"
+          else:
+            buff.add "\n"
+        buff.add "}\n"
+      buff.add "} SECTION INSTANCES\n"
+
+  for name, d in layout.defs:
+    if name != "":
+      result.addDef d, false
+
+  result.addDef layout.defs[""], true

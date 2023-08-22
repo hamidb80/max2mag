@@ -40,7 +40,7 @@ func toMag(label: max.Label, layer: string): mag.Label =
 
 func toMag(use: max.Use, ins: Instance): mag.Use =
   result.cell = ins.comp.ident.toMag
-  result.name = use.id # TODO choose a unique name
+  result.name = use.ident # TODO choose a unique name
   result.transform = use.trans
   result.box = ins.bound
   result.array = use.array

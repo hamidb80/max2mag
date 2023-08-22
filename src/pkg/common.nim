@@ -43,6 +43,9 @@ template `or`*(a, b: string): string =
   if a == "": b
   else: a
 
+template iff*(cond, ok, bad): untyped =
+  if cond: ok
+  else: bad
 
 func joinSpaces*[T](r: openArray[T]): string =
   r.join " "
