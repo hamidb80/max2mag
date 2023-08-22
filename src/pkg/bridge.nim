@@ -31,8 +31,8 @@ func toMag(s: string): string =
 
     lastc = newc
 
-func toMag(label: Label, layer: string): RLabel =
-  RLabel(
+func toMag(label: max.Label, layer: string): mag.Label =
+  mag.Label(
     layer: layer,
     position: label.pos,
     kind: label.kind.int,
@@ -40,7 +40,7 @@ func toMag(label: Label, layer: string): RLabel =
 
 func toMag(use: max.Use, ins: Instance): mag.Use =
   result.cell = ins.comp.ident.toMag
-  result.name = use.id
+  result.name = use.id # TODO choose a unique name
   result.transform = use.trans
   result.box = ins.bound
   result.array = use.array
@@ -56,7 +56,7 @@ func toMag*(max: MaxLayout, mainLayout: string): MagLayoutLookup =
       let l = toMagLayer lname
       mag.rects[l] = layer.rects
       for lbl in layer.labels:
-        mag.rlabels.add toMag(lbl, l)
+        mag.labels.add toMag(lbl, l)
 
     for ins in component.instances:
       for u in ins.uses:

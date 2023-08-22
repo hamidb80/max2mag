@@ -11,18 +11,17 @@ type
     box*: Rect
     array*: Option[Array]
 
-  RLabel* = object
+  Label* = object
     layer*: string
     position*: Rect
     kind*: int # TODO
     text*: string
 
-  # TODO does order of stored layers matter ??
   MagLayout* = object
     tech*: string
     timestamp*: int
     rects*: OrderedSeqTable[layer >> string, Rect]
-    rlabels*: seq[RLabel]
+    labels*: seq[Label]
     uses*: seq[Use]
 
   MagLayoutLookup* = Table[cellName >> string, MagLayout]
@@ -56,7 +55,7 @@ func parseMag*(content: string): MagLayout =
         let r = Rect toArrMap[4, string, int](parts, parseInt, 1)
         result.rects.add lastLayer, r
       of "rlabel":
-        result.rlabels.add RLabel(
+        result.labels.add Label(
           layer: parts[1],
           position: Rect toArrMap[4, string, int](parts, parseInt, 2),
           kind: parseint parts[6],
@@ -65,30 +64,29 @@ func parseMag*(content: string): MagLayout =
       else: err fmt"invalid command '{parts[0]}'"
 
 func `$`*(mag: MagLayout): string =
-  result.addMulti "magic", '\n'
-  result.addMulti "tech ", mag.tech, '\n'
-  result.addMulti "timestamp ", $mag.timestamp, '\n'
+  result.add "magic\n"
+  result.add fmt "tech {mag.tech}\n"
+  result.add fmt "timestamp {mag.timestamp}\n"
 
   for k, v in mag.rects:
-    result.addMulti "<< ", k, " >>", '\n'
-    for r in v:
-      result.addMulti "rect ", r.join(" "), '\n'
+    if v.len != 0:
+      result.add fmt "<< {k} >>\n"
+      for r in v:
+        result.add fmt "rect {joinSpaces r}\n"
 
-  if mag.rlabels.len != 0:
-    result.addMulti "<< labels >>\n"
+  if mag.labels.len != 0:
+    result.add "<< labels >>\n"
 
-  for l in mag.rlabels:
-    result.addMulti "rlabel ", l.layer, ' ',
-      l.position.join(" "), ' ', $l.kind, ' ', l.text, '\n'
-
+  for l in mag.labels:
+    result.add fmt "rlabel {l.layer} {joinSpaces l.position} {l.kind} \"{l.text}\"\n"
   for u in mag.uses:
-    result.addMulti "use ", u.cell, ' ', u.name, '\n'
+    result.add fmt "use {u.cell} {u.name}\n"
 
     if isSome u.array:
-      result.addMulti "array ", u.array.get.join(" "), '\n'
+      result.add fmt "array {joinSpaces u.array.get}\n"
 
-    result.addMulti "timestamp ", $u.timestamp, '\n'
-    result.addMulti "transform ", $u.transform.join(" "), '\n'
-    result.addMulti "box ", u.box.join(" "), '\n'
+    result.add fmt "timestamp {u.timestamp}\n"
+    result.add fmt "transform {joinSpaces u.transform}\n"
+    result.add fmt "box {joinSpaces u.box}\n"
 
-  result.addMulti "<< end >>\n"
+  result.add "<< end >>\n"

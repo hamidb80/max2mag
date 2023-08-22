@@ -1,5 +1,4 @@
-import std/[unittest, tables, os, sequtils]
-import pretty
+import std/[unittest, tables, sequtils, os, ]
 import ../src/pkg/[max, mag, bridge]
 
 
@@ -19,12 +18,14 @@ test "max -> mag":
     "./dist/tut/array.max",
     "./dist/inv-buff/micro-magic/Buf.max"
   ]:
-    let 
-      pff = splitFile p
+    let
+      sp = splitFile p
       max = parseMax readfile p
-      magTable = toMag(max, pff.name)
+      magTable = toMag(max, sp.name)
 
-    copyFile p, "./temp" / pff.name & pff.ext
+    copyFile p, "./temp" / sp.name & sp.ext
     for cell, layout in magTable:
       writeFile "./temp" / cell & ".mag", $layout
-      
+
+test "mag -> max":
+  discard

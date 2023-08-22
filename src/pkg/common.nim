@@ -39,27 +39,22 @@ template `>>`*(lable, typee): untyped =
 template err*(msg): untyped =
   raise newException(ValueError, msg)
 
-# FIXME addfmt
-macro addMulti*(container: untyped, values: varargs[untyped]): untyped =
-  result = newStmtList()
-  for v in values:
-    result.add quote do:
-      `container`.add `v`
+template `or`*(a, b: string): string =
+  if a == "": b
+  else: a
 
 
-func toArr*[N: static int; T](s: seq[T], offset: Natural = 0): array[N, T] =
+func joinSpaces*[T](r: openArray[T]): string =
+  r.join " "
+
+func toArr*[N: static int; T](s: seq[T]; offset: Natural = 0): array[N, T] =
   for i in 0 ..< N:
     result[i] = s[i+offset]
 
-func toArrMap*[N: static int, A, B](
-  s: seq[A],
-  fn: proc(a: A): B,
+func toArrMap*[N: static int; A, B](
+  s: seq[A];
+  fn: proc(a: A): B;
   offset: Natural
 ): array[N, B] {.effectsOf: fn.} =
   for i in 0 ..< result.len:
     result[i] = fn s[i+offset]
-
-
-template `or`*(a, b: string): string =
-  if a == "": b
-  else: a

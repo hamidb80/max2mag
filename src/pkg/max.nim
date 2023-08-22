@@ -12,7 +12,7 @@ type
     comp*: Component
     bound*: Rect
     uses*: seq[Use]
-  
+
   LabelKind* = enum
     lComment
     lHidden
@@ -250,7 +250,7 @@ func parseMax*(content: string): MaxLayout =
           result.defs[defName].instances[^1].bound = bound
 
         of "SECTION", "uses": discard
-        of "vMAIN", "vDRC", "vBBOX": 
+        of "vMAIN", "vDRC", "vBBOX":
           result.defs[""].version = tokens[1].intVal
 
         else: # in uses
@@ -272,5 +272,6 @@ func parseMax*(content: string): MaxLayout =
       of mtkCloseBracket, mtkComment: discard
       else: err "invalid node kind: " & $head.kind & ' ' & $head
 
-# func `$`(layout: MaxLayout): string = 
-#   discard
+
+func `$`*(layout: MaxLayout): string = # TODO
+  discard
