@@ -27,19 +27,9 @@ type
   LayoutLookup* = Table[cellName >> string, Layout]
 
 
-iterator deps*(l: Layout): string =
+iterator externalDeps(l: Layout): string =
   for u in l.uses:
     yield u.cell
-
-# func layers*(mag: Layout): seq[string] =
-#   var allLayers = initHashSet[string]()
-
-#   for layer in mag.rects.keys:
-#     allLayers.incl layer
-#   for lbl in mag.labels:
-#     allLayers.incl lbl.layer
-
-#   a llLayers.toseq
 
 func parseMag*(content: string): Layout =
   var lastLayer = ""
@@ -107,34 +97,22 @@ func `$`*(mag: Layout): string =
 
   result.add "<< end >>\n"
 
-func `$`(p: Path): string {.borrow.}
-
-proc cellPath(
-  cellName: string,
-  searchPaths: seq[Path]
-): Path =
-  for sp in searchPaths:
-    let fp = sp / (cellName & ".mag").Path
-    if fileExists fp.string:
-      return fp
-
-  err fmt "The cell '{cellName}' not found in search paths.\nSearch paths: {searchPaths}"
 
 proc loadDeps(
   mll: var LayoutLookup,
   cells: var DoublyLinkedList[string],
-  searchPaths: seq[Path],
+  searchPaths: seq[string],
 ) =
   for cellName in cells:
-    for d in deps mll[cellName]:
+    for d in externalDeps mll[cellName]:
       if d notin mll:
         cells.append d
-        mll[d] = parseMag readFile string cellPath(d, searchPaths)
+        mll[d] = parseMag readFile findFile(d & ".mag", searchPaths)
 
 proc loadDeps*(
   layout: Layout,
   cellName: string,
-  searchPaths: seq[Path]
+  searchPaths: seq[string]
 ): LayoutLookup =
   var cells = initDoublyLinkedList[cell >> string]()
   cells.append cellName

@@ -37,14 +37,23 @@ discard existsOrCreateDir "./temp"
 #     for cell, layout in magTable:
 #       writeFile "./temp" / cell & ".mag", $layout
 
-test "mag -> max":
-  for path in ["./dist/tut/tut4a.mag"]:
-    let
-      pparts = splitFile path
-      maglayout = parseMag readFile path
-      mglkup = loadDeps(maglayout, pparts.name, @[Path pparts.dir])
-      mxlkup = toMax mglkup
+# test "mag -> max":
+#   for path in ["./dist/tut/tut4a.mag"]:
+#     let
+#       pparts = splitFile path
+#       maglayout = parseMag readFile path
+#       mglkup = loadDeps(maglayout, pparts.name, @[pparts.dir])
+#       mxlkup = toMax mglkup
 
-    print mxlkup
-    for name, maxlayout in mxlkup:
-      writeFile "./temp" / (name & ".max"), $maxlayout
+#     print mxlkup
+#     for name, maxlayout in mxlkup:
+#       writeFile "./temp" / (name & ".max"), $maxlayout
+
+test "load max deps":
+  let 
+    path = "./temp/tut4a.max"
+    pparts = splitFile path
+    maxlayout = parseMax readFile path
+    mxlkup = maxlayout.loadDeps(pparts.name, @[pparts.dir])
+
+  print mxlkup

@@ -1,4 +1,4 @@
-import std/[tables, sequtils, options, strutils, parseutils, strformat]
+import std/[tables, sequtils, options, strutils, parseutils, strformat, lists, sets]
 import ./common
 
 
@@ -74,6 +74,17 @@ type
     else:
       nil
 
+
+iterator externalDeps(l: Layout): string =
+  var internalDeps = initHashSet[string]()
+  for name, comp in l.defs:
+    if name != "":
+      for ident, ins in comp.instances:
+        internalDeps.incl ident
+
+  for ident, ins in l.defs[""].instances:
+    if ident notin internalDeps:
+      yield ident
 
 func addLayerIfNotExists(layers: var LayerTable, layer: string) =
   if layer notin layers:
@@ -336,5 +347,23 @@ func `$`*(layout: Layout): string =
   result.addDef "", layout.defs[""], true
 
 
-# TODO
-# proc loadDeps() 
+proc loadDeps(
+  mll: var LayoutLookup,
+  cells: var DoublyLinkedList[string],
+  searchPaths: seq[string],
+) =
+  for cellName in cells:
+    for d in externalDeps mll[cellName]:
+      if d notin mll:
+        cells.append d
+        mll[d] = parseMax readFile findFile(d & ".max", searchPaths)
+
+proc loadDeps*(
+  layout: Layout,
+  cellName: string,
+  searchPaths: seq[string]
+): LayoutLookup =
+  var cells = initDoublyLinkedList[cell >> string]()
+  cells.append cellName
+  result[cellName] = layout
+  loadDeps result, cells, searchPaths

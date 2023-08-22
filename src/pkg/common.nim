@@ -1,12 +1,6 @@
+import std/[strformat, os]
+
 type
-  RectPart* = enum
-    l # left
-    b # bottom
-    r # right
-    t # top
-
-  Rect* = array[RectPart, int]
-
   Align* = enum
     c  # GEO_CENTER
     n  # GEO_NORTH
@@ -17,6 +11,14 @@ type
     sw # GEO_SOUTHWEST
     w  # GEO_WEST
     nw # GEO_NORTHWEST
+
+  RectPart* = enum
+    l # left
+    b # bottom
+    r # right
+    t # top
+
+  Rect* = array[RectPart, int]
 
   CompactTransformPart* = enum
     a, b, c, d, e, f
@@ -62,3 +64,12 @@ func toArrMap*[N: static int; A, B](
 ): array[N, B] {.effectsOf: fn.} =
   for i in 0 ..< result.len:
     result[i] = fn s[i+offset]
+
+
+proc findFile*(fname: string, searchPaths: seq[string]): string =
+  for sp in searchPaths:
+    let fp = sp / fname
+    if fileExists fp:
+      return fp
+
+  err fmt "The file '{fname}' not found in search paths.\nSearch paths:\n {searchPaths}"
