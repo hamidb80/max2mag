@@ -175,3 +175,145 @@ array
 ```
 	&xlo, &xhi, &xsep, &ylo, &yhi, &ysep
 ```
+
+# MAX Guide
+## Fill
+1. select an area
+2. right click on a layer in the left toolbar
+
+## Move
+- drag middle mouse 
+- arrow keys
+
+## Add another Cell
+press `Shfit` & drag it from right menu to the cell with `Mouse-1`
+
+## include/subtract metal
+1. select an area
+2. right click on it
+	- inside to include
+	- outside to substract
+
+# Template
+```rust
+# comments ...
+
+max [MAX_VERSION]
+tech [TECHNOLOGY]
+resolution [SCALE]
+
+// DEF has 2 forms
+DEF #[IDENT]!-_version![TIMESTAMP] "[SHOW_NAME]" "[SHOW_INST]" // external components
+DEF // main | must be only one in a .max file
+
+SECTION VERIONS {
+(vMAIN|vDRC|vBBOX) [TIMESTAMP] [REVISTION]
+} SECTION VERIONS
+
+SECTION RECTS {
+layer [LAYER]
+l b r t // left(x1) bottom(y1) right(x2) top(y2)
+} SECTION RECTS
+
+SECTION GROUPS {
+} SECTION GROUPS
+
+SECTION LABELS {
+lab [LAYER] l b r t orient kind text
+} SECTION LABELS
+
+SECTION INSTANCES {
+gcell [TIMESTAMP] #[IDENT]
+bbox l b r t
+uses { 
+
+	USE_IDENT: 
+		_[INDEX]
+		/#[FORKED_FROM_IDENT]_[USES_INDEX_OF_FORKED]
+
+	 [USE_IDENT] [TRANSFORM] ? array [TRANSFORM]
+}
+```
+## Sections
+accroding to `src/max/m/database/dbwrite.c`
+- VERSIONS
+- RECTS
+- LABELS
+- INSTANCES
+- GROUPS
+- POLYGONS
+- WIREPATHS
+- FLYLINES
+- PROPERTIES
+
+## Label kinds
+```c
+/* Kinds of Labels */
+#define LAB_COMMENT 	0
+/* hidden labels not normally displayed */
+#define LAB_HIDDEN 		1 
+#define LAB_LOCAL 		2
+#define LAB_GLOBAL 		3
+/* ports */
+#define LAB_INPUT 		4
+#define LAB_OUTPUT 		5
+#define LAB_INOUT 		6
+#define LAB_MAX_KIND 	6
+```
+
+## Align (orient)
+```c
+#define GEO_CENTER		0
+#define GEO_NORTH		1
+#define GEO_NORTHEAST	2
+#define GEO_EAST     	3
+#define GEO_SOUTHEAST	4
+#define GEO_SOUTH		5
+#define GEO_SOUTHWEST	6
+#define GEO_WEST		7
+#define GEO_NORTHWEST	8
+```
+
+## Transition
+take a look at `geometry.c`
+
+## Polygon
+circles are stored as large polygons
+```rust
+SECTION POLYGONS {
+poly poly [NUMBER_OF_POINTS] {
+	X Y // to be repeated 
+	}
+} SECTION POLYGONS
+```
+
+## WIREPATHS
+non straight wire
+```rust
+SECTION WIREPATHS {
+wpath layer 0 400 4 {
+	2580 2700
+	540 2700
+	-1186 5690
+	-1940 5255
+	}
+} SECTION WIREPATHS
+```
+
+# MAG
+http://opencircuitdesign.com/magic/
+Look at:
+style: left menu -> sub title
+1. Using Magic: Introductory Material or [here](http://opencircuitdesign.com/magic/tutorials/)
+2. Documentation: Magic Manual Pages
+
+
+## Lambda Unit
+Magic uses "lambda" units that are dimensionless. When layout data are converted to a CIF or GDS file to send to the foundry for chip fabrication, the lambda units are converted to physical units at a appropriate scale.
+
+## Entities in a cell
+In Magic, a circuit layout is a hierarchical collection of cells. Each cell contains (primarily) four things: 
+1. colored shapes, called paint, that define the circuit's structure
+2. textual labels attached to the paint
+3. subcells, which are instances of other cells
+4. properties, which are arbitrary key-value pairs attached to the cell definition.

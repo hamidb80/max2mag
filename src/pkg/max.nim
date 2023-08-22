@@ -1,4 +1,4 @@
-import std/[tables, sequtils, options, strutils, parseutils, strformat, lists, sets]
+import std/[tables, sequtils, options, strutils, parseutils, strformat]
 import ./common
 
 
@@ -74,15 +74,9 @@ type
     else:
       nil
 
-# template fileExt*(_: typedesc[Layout]): string = ".max"
-
-iterator externalDeps(l: Layout): string =
-  var internalDeps = initHashSet[string]()
-  for name, comp in l.defs:
-    internalDeps.incl name
-
+iterator externalDeps*(l: Layout): string =
   for ident, ins in l.defs[""].instances:
-    if ident notin internalDeps:
+    if ident notin l.defs:
       yield ident
 
 func addLayerIfNotExists(layers: var LayerTable, layer: string) =
@@ -267,6 +261,7 @@ func parseMax*(content: string): Layout =
           result.defs[defName].instances[gcellName].bound = bound
 
         of "SECTION", "uses": discard
+        of "def": err "not implemented"
         of "vMAIN", "vDRC", "vBBOX":
           result.defs[""].version = tokens[1].intVal
 
@@ -323,11 +318,24 @@ func `$`*(layout: Layout): string =
     # buff.add "\nSECTION GROUPS {\n"
     # buff.add "} SECTION GROUPS\n"
 
+    # buff.add "\nSECTION POLYGONS {\n"
+    # buff.add "} SECTION POLYGONS\n"
+
+    # buff.add "\nSECTION WIREPATHS {\n"
+    # buff.add "} SECTION WIREPATHS\n"
+
     if d.instances.len != 0:
       buff.add "\nSECTION INSTANCES {\n"
 
       for ident, ins in d.instances:
-        buff.add fmt "gcell {d.version} {ident}\n"
+        if ident in layout.defs: # created by generator cells
+          buff.add fmt "gcell {d.version} {ident}\n"
+        else: # imported from another .max file
+          buff.add fmt "def {ident}\n"
+          buff.add fmt "vMAIN 0 0\n"
+          buff.add fmt "vDRC 0 0\n"
+          buff.add fmt "vBBOX 0 0\n"
+
         buff.add fmt "bbox {joinSpaces ins.bound}\n"
         buff.add "uses {\n"
         for u in ins.uses:
@@ -346,23 +354,7 @@ func `$`*(layout: Layout): string =
   result.addDef "", layout.defs[""], true
 
 
-proc loadDeps(
-  mll: var LayoutLookup,
-  cells: var DoublyLinkedList[string],
-  searchPaths: seq[string]
-) =
-  for cellName in cells:
-    for d in externalDeps mll[cellName]:
-      if d notin mll:
-        cells.append d
-        mll[d] = parseMax readFile findFile(d & ".max", searchPaths)
+template fileExt*(_: typedesc[Layout]): string = ".max"
 
-proc loadDeps*(
-  layout: Layout,
-  cellName: string,
-  searchPaths: seq[string]
-): LayoutLookup =
-  var cells = initDoublyLinkedList[cell >> string]()
-  cells.append cellName
-  result[cellName] = layout
-  loadDeps result, cells, searchPaths
+template parseLayout*(_: typedesc[Layout], content: string): Layout =
+  parseMax content

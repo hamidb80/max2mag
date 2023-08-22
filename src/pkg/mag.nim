@@ -27,9 +27,7 @@ type
   LayoutLookup* = Table[cellName >> string, Layout]
 
 
-template fileExt*(_: typedesc[Layout]): string = ".max"
-
-iterator externalDeps(l: Layout): string =
+iterator externalDeps*(l: Layout): string =
   for u in l.uses:
     yield u.cell
 
@@ -67,7 +65,7 @@ func parseMag*(content: string): Layout =
           layer: parts[1],
           position: Rect toArrMap[4, string, int](parts, parseInt, 2),
           kind: parseint parts[6],
-          text: parts[7])
+          text: parts[7].strip '"')
 
       else: err fmt"invalid command '{parts[0]}'"
 
@@ -100,23 +98,7 @@ func `$`*(mag: Layout): string =
   result.add "<< end >>\n"
 
 
-proc loadDeps(
-  mll: var LayoutLookup,
-  cells: var DoublyLinkedList[string],
-  searchPaths: seq[string],
-) =
-  for cellName in cells:
-    for d in externalDeps mll[cellName]:
-      if d notin mll:
-        cells.append d
-        mll[d] = parseMag readFile findFile(d & ".mag", searchPaths)
+template fileExt*(_: typedesc[Layout]): string = ".mag"
 
-proc loadDeps*(
-  layout: Layout,
-  cellName: string,
-  searchPaths: seq[string]
-): LayoutLookup =
-  var cells = initDoublyLinkedList[cell >> string]()
-  cells.append cellName
-  result[cellName] = layout
-  loadDeps result, cells, searchPaths
+template parseLayout*(_: typedesc[Layout], content: string): Layout = 
+  parseMag content

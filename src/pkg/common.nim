@@ -1,4 +1,4 @@
-import std/[strformat, os]
+import std/[os, strutils]
 
 type
   Align* = enum
@@ -47,11 +47,13 @@ template iff*(cond, ok, bad): untyped =
   if cond: ok
   else: bad
 
-# template `|>`*(a, b): untyped =
-#   a.mapIt b
 
 func joinSpaces*[T](r: openArray[T]): string =
   r.join " "
+
+func strip*(s: string; ch: char): string =
+  s.strip(chars = {ch})
+
 
 func toArr*[N: static int; T](s: seq[T]; offset: Natural = 0): array[N, T] =
   for i in 0 ..< N:
@@ -65,11 +67,3 @@ func toArrMap*[N: static int; A, B](
   for i in 0 ..< result.len:
     result[i] = fn s[i+offset]
 
-
-proc findFile*(fname: string, searchPaths: seq[string]): string =
-  for sp in searchPaths:
-    let fp = sp / fname
-    if fileExists fp:
-      return fp
-
-  err fmt "The file '{fname}' not found in search paths.\nSearch paths:\n {searchPaths}"

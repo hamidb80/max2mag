@@ -27,7 +27,8 @@ func toMax(u: mag.Use): max.Use =
 func toMax(lbl: mag.Label): max.Label =
   max.Label(
     position: lbl.position,
-    orient: Align lbl.kind.int,
+    orient: c,
+    kind: lLocal,
     text: lbl.text)
 
 func toMax(layout: mag.Layout): max.Layout =
@@ -56,7 +57,7 @@ func toMax*(mll: mag.LayoutLookup): max.LayoutLookup =
     var mx = toMax layout
     mx.defs[""].version = layout.timestamp
     mx.tech = "mmi25" or layout.tech
-    mx.resolution = 0.1
+    mx.resolution = 0.001
     mx.version = 3
     result[cell] = mx
 

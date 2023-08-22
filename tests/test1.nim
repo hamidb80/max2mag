@@ -1,5 +1,5 @@
 import std/[unittest, tables, os]
-import ../src/pkg/[max, mag, bridge]
+import ../src/pkg/[max, mag, bridge, depsloader]
 import pretty
 
 discard existsOrCreateDir "./temp"
