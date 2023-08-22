@@ -95,7 +95,7 @@ func toMag(use: max.Use, ins: Instance, timestamp: int): mag.Use =
   result.array = use.array
   result.timestamp = timestamp
 
-func toMag*(layout: max.Layout, mainCell: string): mag.LayoutLookup =
+func toMag(layout: max.Layout, mainCell: string, mll: var mag.LayoutLookup) =
   for name, component in layout.defs:
     var mag = mag.Layout()
     mag.tech = "scmos" or layout.tech # FIXME
@@ -111,7 +111,8 @@ func toMag*(layout: max.Layout, mainCell: string): mag.LayoutLookup =
       for u in ins.uses:
         mag.uses.add toMag(u, ins, component.version)
 
-    result[toMag(name or mainCell)] = mag
+    mll[toMag(name or mainCell)] = mag
 
-# TODO
-# func toMag*(layout: max.LayoutLookup): mag.LayoutLookup =
+func toMag*(mll: max.LayoutLookup): mag.LayoutLookup =
+  for name, layout in mll:
+    toMag layout, name, result

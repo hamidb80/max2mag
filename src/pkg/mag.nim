@@ -1,4 +1,4 @@
-import std/[tables, strformat, strutils, lists, options, paths, os]
+import std/[tables, strformat, strutils, lists, options]
 import ./[common]
 
 
@@ -26,6 +26,8 @@ type
 
   LayoutLookup* = Table[cellName >> string, Layout]
 
+
+template fileExt*(_: typedesc[Layout]): string = ".max"
 
 iterator externalDeps(l: Layout): string =
   for u in l.uses:

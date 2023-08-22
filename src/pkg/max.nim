@@ -74,13 +74,12 @@ type
     else:
       nil
 
+# template fileExt*(_: typedesc[Layout]): string = ".max"
 
 iterator externalDeps(l: Layout): string =
   var internalDeps = initHashSet[string]()
   for name, comp in l.defs:
-    if name != "":
-      for ident, ins in comp.instances:
-        internalDeps.incl ident
+    internalDeps.incl name
 
   for ident, ins in l.defs[""].instances:
     if ident notin internalDeps:
@@ -350,7 +349,7 @@ func `$`*(layout: Layout): string =
 proc loadDeps(
   mll: var LayoutLookup,
   cells: var DoublyLinkedList[string],
-  searchPaths: seq[string],
+  searchPaths: seq[string]
 ) =
   for cellName in cells:
     for d in externalDeps mll[cellName]:

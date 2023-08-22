@@ -1,4 +1,4 @@
-import std/[unittest, tables, sequtils, os, paths]
+import std/[unittest, tables, os]
 import ../src/pkg/[max, mag, bridge]
 import pretty
 
@@ -23,37 +23,37 @@ discard existsOrCreateDir "./temp"
 #     print lkup
 
 
-# test "max -> mag":
-#   for p in [
-#     "./dist/tut/array.max",
-#     "./dist/inv-buff/micro-magic/Buf.max"
-#   ]:
-#     let
-#       sp = splitFile p
-#       max = parseMax readfile p
-#       magTable = toMag(max, sp.name)
+test "max -> mag":
+  for p in [
+    "./dist/tut/array.max",
+    "./dist/inv-buff/micro-magic/Buf.max"
+  ]:
+    let
+      ppart = splitFile p
+      lay = parseMax readfile p 
+      maxs = loadDeps(lay, ppart.name, @[])
+      mags = toMag maxs
 
-#     copyFile p, "./temp" / sp.name & sp.ext
-#     for cell, layout in magTable:
-#       writeFile "./temp" / cell & ".mag", $layout
+    for cell, layout in mags:
+      writeFile "./temp" / cell & ".mag", $layout
 
-# test "mag -> max":
-#   for path in ["./dist/tut/tut4a.mag"]:
-#     let
-#       pparts = splitFile path
-#       maglayout = parseMag readFile path
-#       mglkup = loadDeps(maglayout, pparts.name, @[pparts.dir])
-#       mxlkup = toMax mglkup
+test "mag -> max":
+  for path in ["./dist/tut/tut4a.mag", "./temp/Buf.mag"]:
+    let
+      pparts = splitFile path
+      maglayout = parseMag readFile path
+      mglkup = loadDeps(maglayout, pparts.name, @[pparts.dir])
+      mxlkup = toMax mglkup
 
-#     print mxlkup
-#     for name, maxlayout in mxlkup:
-#       writeFile "./temp" / (name & ".max"), $maxlayout
+    print mxlkup
+    for name, maxlayout in mxlkup:
+      writeFile "./temp" / (name & ".max"), $maxlayout
 
-test "load max deps":
-  let 
-    path = "./temp/tut4a.max"
-    pparts = splitFile path
-    maxlayout = parseMax readFile path
-    mxlkup = maxlayout.loadDeps(pparts.name, @[pparts.dir])
+# test "load max deps":
+#   let 
+#     path = "./temp/tut4a.max"
+#     pparts = splitFile path
+#     maxlayout = parseMax readFile path
+#     mxlkup = maxlayout.loadDeps(pparts.name, @[pparts.dir])
 
-  print mxlkup
+#   print mxlkup
