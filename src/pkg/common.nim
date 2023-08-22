@@ -1,5 +1,3 @@
-import std/[macros]
-
 type
   RectPart* = enum
     l # left
@@ -46,6 +44,9 @@ template `or`*(a, b: string): string =
 template iff*(cond, ok, bad): untyped =
   if cond: ok
   else: bad
+
+# template `|>`*(a, b): untyped =
+#   a.mapIt b
 
 func joinSpaces*[T](r: openArray[T]): string =
   r.join " "

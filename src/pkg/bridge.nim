@@ -1,11 +1,6 @@
 import std/[tables, strutils, paths, os]
 import ./[max, mag, common]
 
-proc loadDeps*(
-    mll: var MagLayoutLookup, 
-    depsLayouts: seq[string],
-    searchPaths: seq[Path]) = 
-    discard
 
 func toMax*(mag: MagLayoutLookup, mainLayout: string): MaxLayout =
   discard

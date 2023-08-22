@@ -1,4 +1,4 @@
-import std/[tables, strformat, strutils, options]
+import std/[tables, strformat, strutils, lists, options, paths, os]
 import ./[types, common]
 
 
@@ -25,6 +25,11 @@ type
     uses*: seq[Use]
 
   MagLayoutLookup* = Table[cellName >> string, MagLayout]
+
+
+iterator deps*(l: MagLayout): string =
+  for u in l.uses:
+    yield u.cell
 
 
 func parseMag*(content: string): MagLayout =
@@ -90,3 +95,37 @@ func `$`*(mag: MagLayout): string =
     result.add fmt "box {joinSpaces u.box}\n"
 
   result.add "<< end >>\n"
+
+func `$`(p: Path): string {.borrow.}
+
+proc cellPath(
+  cellName: string,
+  searchPaths: seq[Path]
+): Path =
+  for sp in searchPaths:
+    let fp = sp / (cellName & ".mag").Path
+    if fileExists fp.string:
+      return fp
+
+  err fmt "The cell '{cellName}' not found in search paths.\nSearch paths: {searchPaths}"
+
+proc loadDeps(
+  mll: var MagLayoutLookup,
+  cells: var DoublyLinkedList[string],
+  searchPaths: seq[Path],
+) =
+  for cellName in cells:
+    for d in deps mll[cellName]:
+      if d notin mll:
+        cells.append d
+        mll[d] = parseMag readFile string cellPath(d, searchPaths)
+
+proc loadDeps*(
+  layout: MagLayout,
+  cellName: string,
+  searchPaths: seq[Path]
+): MagLayoutLookup =
+  var cells = initDoublyLinkedList[cell >> string]()
+  cells.append cellName
+  result[cellName] = layout
+  loadDeps result, cells, searchPaths

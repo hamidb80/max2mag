@@ -1,17 +1,27 @@
-import std/[unittest, tables, sequtils, os]
+import std/[unittest, tables, sequtils, os, paths]
 import ../src/pkg/[max, mag, bridge]
-
+import pretty
 
 discard existsOrCreateDir "./temp"
 
-test "max":
-  # let m = parseMax readfile "./dist/max_tutorial/tutorial/NAND2.max"
-  let m = parseMax readfile "./dist/tut/array.max"
-  writeFile "./temp/array2.max", $m
+# test "max":
+#   # let m = parseMax readfile "./dist/max_tutorial/tutorial/NAND2.max"
+#   let m = parseMax readfile "./dist/tut/array.max"
+#   writeFile "./temp/array2.max", $m
 
-# test "mag":
-#   let m = parseMag readFile "./dist/tut/tut4x.mag"
-#   print m
+suite "mag":
+  let
+    path = "./dist/tut/tut4a.mag"
+    pparts = splitFile path
+    layout = parseMag readFile path
+
+  test "load":
+    print layout
+
+  test "load deps":
+    let lkup = loadDeps(layout, pparts.name, @[Path pparts.dir])
+    print lkup
+
 
 # test "max -> mag":
 #   for p in [
