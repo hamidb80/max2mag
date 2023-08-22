@@ -8,11 +8,14 @@ func toMaxLayer(l: string): string =
   of "pcontact": "ct"
   of "polycontact": "poly"
   of "ndcontact": "v34"
+  of "pdcontact": "v23"
   of "m2contact": "v12"
+  of "ntransistor", "ptransistor": "v45"
   of "metal1": "m1"
   of "metal2": "m2"
   of "polysilicon": "m3"
   of "nsubstratencontact": "m4"
+  of "psubstratepcontact": "m5"
   else: l
 
 func toMax(u: mag.Use): max.Use =
@@ -27,37 +30,35 @@ func toMax(lbl: mag.Label): max.Label =
     orient: Align lbl.kind.int,
     text: lbl.text)
 
-func toMax(cell: string, layout: MagLayout): max.Component =
-  result = Component()
-  result.version = layout.timestamp
-  result.ident = cell # TODO add version identifier
+func toMax(layout: mag.Layout): max.Layout =
+  var comp = max.Component()
+  comp.version = layout.timestamp
+  comp.ident = ""
 
   for layer, rects in layout.rects:
     for r in rects:
-      result.layers.addRect toMaxLayer layer, r
+      comp.layers.addRect toMaxLayer layer, r
 
   for lbl in layout.labels:
-    result.layers.addLabel toMaxLayer lbl.layer, toMax lbl
+    comp.layers.addLabel toMaxLayer lbl.layer, toMax lbl
 
   for u in layout.uses:
-    if u.cell notin result.instances:
-      result.instances[u.cell] = max.Instance(
-        comp: result,
+    if u.cell notin comp.instances:
+      comp.instances[u.cell] = max.Instance(
+        comp: u.cell,
         bound: u.box)
 
-    result.instances[u.cell].uses.add toMax u
+    comp.instances[u.cell].uses.add toMax u
+  result.defs[""] = comp
 
-
-func toMax*(mll: MagLayoutLookup, mainCell: string): MaxLayout =
-  result.tech = "mmi25" or mll[mainCell].tech
-  result.version = 3
-
+func toMax*(mll: mag.LayoutLookup): max.LayoutLookup =
   for cell, layout in mll:
-    if cell != mainCell:
-      result.defs[cell] = toMax(cell, layout)
-
-  result.defs[""] = toMax(mainCell, mll[mainCell])
-  result.defs[""].version = mll[mainCell].timestamp
+    var mx = toMax layout
+    mx.defs[""].version = layout.timestamp
+    mx.tech = "mmi25" or layout.tech
+    mx.resolution = 0.1
+    mx.version = 3
+    result[cell] = mx
 
 func toMagLayer(l: string): string =
   case l
@@ -86,18 +87,18 @@ func toMag(label: max.Label, layer: string): mag.Label =
     kind: label.kind.int,
     text: label.text)
 
-func toMag(use: max.Use, ins: Instance): mag.Use =
-  result.cell = ins.comp.ident.toMag
+func toMag(use: max.Use, ins: Instance, timestamp: int): mag.Use =
+  result.cell = ins.comp.toMag
   result.name = use.ident # TODO choose a unique name
   result.transform = use.transform
   result.box = ins.bound
   result.array = use.array
-  result.timestamp = ins.comp.version
+  result.timestamp = timestamp
 
-func toMag*(max: MaxLayout, mainCell: string): MagLayoutLookup =
-  for name, component in max.defs:
-    var mag = MagLayout()
-    mag.tech = "scmos" or max.tech # FIXME
+func toMag*(layout: max.Layout, mainCell: string): mag.LayoutLookup =
+  for name, component in layout.defs:
+    var mag = mag.Layout()
+    mag.tech = "scmos" or layout.tech # FIXME
     mag.timestamp = component.version
 
     for lname, layer in component.layers:
@@ -108,6 +109,9 @@ func toMag*(max: MaxLayout, mainCell: string): MagLayoutLookup =
 
     for _, ins in component.instances:
       for u in ins.uses:
-        mag.uses.add toMag(u, ins)
+        mag.uses.add toMag(u, ins, component.version)
 
     result[toMag(name or mainCell)] = mag
+
+# TODO
+# func toMag*(layout: max.LayoutLookup): mag.LayoutLookup =

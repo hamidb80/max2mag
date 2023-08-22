@@ -17,21 +17,21 @@ type
     kind*: int # TODO
     text*: string
 
-  MagLayout* = object
+  Layout* = object
     tech*: string
     timestamp*: int
     rects*: OrderedTable[layer >> string, seq[Rect]]
     labels*: seq[Label]
     uses*: seq[Use]
 
-  MagLayoutLookup* = Table[cellName >> string, MagLayout]
+  LayoutLookup* = Table[cellName >> string, Layout]
 
 
-iterator deps*(l: MagLayout): string =
+iterator deps*(l: Layout): string =
   for u in l.uses:
     yield u.cell
 
-# func layers*(mag: MagLayout): seq[string] =
+# func layers*(mag: Layout): seq[string] =
 #   var allLayers = initHashSet[string]()
 
 #   for layer in mag.rects.keys:
@@ -41,7 +41,7 @@ iterator deps*(l: MagLayout): string =
 
 #   a llLayers.toseq
 
-func parseMag*(content: string): MagLayout =
+func parseMag*(content: string): Layout =
   var lastLayer = ""
 
   for line in content.splitLines:
@@ -79,7 +79,7 @@ func parseMag*(content: string): MagLayout =
 
       else: err fmt"invalid command '{parts[0]}'"
 
-func `$`*(mag: MagLayout): string =
+func `$`*(mag: Layout): string =
   result.add "magic\n"
   result.add fmt "tech {mag.tech}\n"
   result.add fmt "timestamp {mag.timestamp}\n"
@@ -121,7 +121,7 @@ proc cellPath(
   err fmt "The cell '{cellName}' not found in search paths.\nSearch paths: {searchPaths}"
 
 proc loadDeps(
-  mll: var MagLayoutLookup,
+  mll: var LayoutLookup,
   cells: var DoublyLinkedList[string],
   searchPaths: seq[Path],
 ) =
@@ -132,10 +132,10 @@ proc loadDeps(
         mll[d] = parseMag readFile string cellPath(d, searchPaths)
 
 proc loadDeps*(
-  layout: MagLayout,
+  layout: Layout,
   cellName: string,
   searchPaths: seq[Path]
-): MagLayoutLookup =
+): LayoutLookup =
   var cells = initDoublyLinkedList[cell >> string]()
   cells.append cellName
   result[cellName] = layout

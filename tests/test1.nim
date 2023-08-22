@@ -9,18 +9,18 @@ discard existsOrCreateDir "./temp"
 #   let m = parseMax readfile "./dist/tut/array.max"
 #   writeFile "./temp/array2.max", $m
 
-suite "mag":
-  let
-    path = "./dist/tut/tut4a.mag"
-    pparts = splitFile path
-    layout = parseMag readFile path
+# suite "mag":
+#   let
+#     path = "./dist/tut/tut4a.mag"
+#     pparts = splitFile path
+#     layout = parseMag readFile path
 
-  test "load":
-    print layout
+#   test "load":
+#     print layout
 
-  test "load deps":
-    let lkup = loadDeps(layout, pparts.name, @[Path pparts.dir])
-    print lkup
+#   test "load deps":
+#     let lkup = loadDeps(layout, pparts.name, @[Path pparts.dir])
+#     print lkup
 
 
 # test "max -> mag":
@@ -38,12 +38,13 @@ suite "mag":
 #       writeFile "./temp" / cell & ".mag", $layout
 
 test "mag -> max":
-  let
-    path = "./dist/tut/tut4a.mag"
-    pparts = splitFile path
-    layout = parseMag readFile path
-    lkup = loadDeps(layout, pparts.name, @[Path pparts.dir])
+  for path in ["./dist/tut/tut4a.mag"]:
+    let
+      pparts = splitFile path
+      maglayout = parseMag readFile path
+      mglkup = loadDeps(maglayout, pparts.name, @[Path pparts.dir])
+      mxlkup = toMax mglkup
 
-  let m = toMax(lkup, pparts.name)
-  # print m
-  writeFile "./temp" / (pparts.name & ".max"), $m
+    print mxlkup
+    for name, maxlayout in mxlkup:
+      writeFile "./temp" / (name & ".max"), $maxlayout

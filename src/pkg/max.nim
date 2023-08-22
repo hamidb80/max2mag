@@ -9,7 +9,7 @@ type
     array*: Option[Array]
 
   Instance* = ref object
-    comp*: Component
+    comp*: string
     bound*: Rect
     uses*: seq[Use]
 
@@ -46,11 +46,13 @@ type
 
   DefineTable = Table[defIdent >> string, Component]
 
-  MaxLayout* = object
+  Layout* = object
     version*: int
     tech*: string
     resolution*: float
     defs*: DefineTable
+
+  LayoutLookup* = Table[defIdent >> string, Layout]
 
   MaxTokenKind* = enum
     mtkComment
@@ -193,7 +195,7 @@ func splitMaxIdent(s: string): tuple[ident: string, version: Option[int]] =
   if parts.len == 2:
     result.version = some parseInt parts[1]
 
-func parseMax*(content: string): MaxLayout =
+func parseMax*(content: string): Layout =
   var
     layer = ""
     defVer = 0
@@ -248,7 +250,7 @@ func parseMax*(content: string): MaxLayout =
           gcellName = tokens[2].strval
 
           result.defs[defName].instances[gcellName] = Instance(
-            comp: result.defs[gcellName])
+            comp: gcellName)
 
         of "bbox":
           let bound = toArrMap[4, MaxToken, int](tokens, getInt, 1)
@@ -277,14 +279,13 @@ func parseMax*(content: string): MaxLayout =
       of mtkCloseBracket, mtkComment: discard
       else: err "invalid node kind: " & $head.kind & ' ' & $head
 
-
-func `$`*(layout: MaxLayout): string =
+func `$`*(layout: Layout): string =
   result.add "# This file is created by max2mag tool\n\n"
   result.add fmt "max {layout.version}\n"
   result.add fmt "tech {layout.tech}\n"
   result.add fmt "resolution {layout.resolution}\n"
 
-  proc addDef(buff: var string, d: Component, isMainDef: bool) =
+  proc addDef(buff: var string, name: string, d: Component, isMainDef: bool) =
     buff.add "\n\n"
     if isMainDef: # main section
       buff.add "DEF\n"
@@ -294,7 +295,7 @@ func `$`*(layout: MaxLayout): string =
       buff.add fmt "vBBOX {d.version} 1\n"
       buff.add "} SECTION VERSIONS\n"
     else:
-      buff.add fmt "DEF {d.ident} \"{d.showName}\" \"{d.insName}\"\n"
+      buff.add fmt "DEF {name} \"{d.showName}\" \"{d.insName}\"\n"
 
     buff.add "\nSECTION RECTS {\n"
     for lname, layer in d.layers:
@@ -316,7 +317,7 @@ func `$`*(layout: MaxLayout): string =
       buff.add "\nSECTION INSTANCES {\n"
 
       for ident, ins in d.instances:
-        buff.add fmt "gcell {ins.comp.version} {ident}\n"
+        buff.add fmt "gcell {d.version} {ident}\n"
         buff.add fmt "bbox {joinSpaces ins.bound}\n"
         buff.add "uses {\n"
         for u in ins.uses:
@@ -330,6 +331,10 @@ func `$`*(layout: MaxLayout): string =
 
   for name, d in layout.defs:
     if name != "":
-      result.addDef d, false
+      result.addDef name, d, false
 
-  result.addDef layout.defs[""], true
+  result.addDef "", layout.defs[""], true
+
+
+# TODO
+# proc loadDeps() 
