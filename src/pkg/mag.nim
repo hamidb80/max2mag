@@ -1,5 +1,5 @@
 import std/[tables, strformat, strutils, lists, options, paths, os]
-import ./[types, common]
+import ./[common]
 
 
 type
@@ -20,7 +20,7 @@ type
   MagLayout* = object
     tech*: string
     timestamp*: int
-    rects*: OrderedSeqTable[layer >> string, Rect]
+    rects*: OrderedTable[layer >> string, seq[Rect]]
     labels*: seq[Label]
     uses*: seq[Use]
 
@@ -31,6 +31,15 @@ iterator deps*(l: MagLayout): string =
   for u in l.uses:
     yield u.cell
 
+# func layers*(mag: MagLayout): seq[string] =
+#   var allLayers = initHashSet[string]()
+
+#   for layer in mag.rects.keys:
+#     allLayers.incl layer
+#   for lbl in mag.labels:
+#     allLayers.incl lbl.layer
+
+#   a llLayers.toseq
 
 func parseMag*(content: string): MagLayout =
   var lastLayer = ""
@@ -58,7 +67,9 @@ func parseMag*(content: string): MagLayout =
         result.uses.add Use(cell: parts[1], name: parts[2])
       of "rect":
         let r = Rect toArrMap[4, string, int](parts, parseInt, 1)
-        result.rects.add lastLayer, r
+        if lastLayer notin result.rects:
+          result.rects[lastLayer] = @[]
+        result.rects[lastLayer].add r
       of "rlabel":
         result.labels.add Label(
           layer: parts[1],

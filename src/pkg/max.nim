@@ -5,7 +5,7 @@ import ./common
 type
   Use* = object
     ident*: string
-    trans*: CompactTransform
+    transform*: CompactTransform
     array*: Option[Array]
 
   Instance* = ref object
@@ -24,25 +24,25 @@ type
     lMaxKind
 
   Label* = object
-    pos*: Rect
+    position*: Rect
     text*: string
     orient*: Align
     kind*: LabelKind
 
   Layer* = object
-    name*: string
     rects*: seq[Rect]
     labels*: seq[Label]
     # POLYGONS
     # WIREPATH
 
-  LayerTable = OrderedTable[layer >> string, Layer]
+  # LayerTable = OrderedTable[layer >> string, Layer]
+  LayerTable = Table[layer >> string, Layer]
 
   Component* = ref object
     ident*, showName*, insName*: string
     version*: int
     layers*: LayerTable
-    instances*: seq[Instance] # main & group def can have this section
+    instances*: Table[ident >> string, Instance] # main & group def can have this section
 
   DefineTable = Table[defIdent >> string, Component]
 
@@ -75,13 +75,13 @@ type
 
 func addLayerIfNotExists(layers: var LayerTable, layer: string) =
   if layer notin layers:
-    layers[layer] = Layer(name: layer)
+    layers[layer] = Layer()
 
-func addRect(layers: var LayerTable, layer: string, bound: Rect) =
+func addRect*(layers: var LayerTable, layer: string, bound: Rect) =
   addLayerIfNotExists layers, layer
   layers[layer].rects.add bound
 
-func addLabel(layers: var LayerTable, layer: string, lbl: Label) =
+func addLabel*(layers: var LayerTable, layer: string, lbl: Label) =
   addLayerIfNotExists layers, layer
   layers[layer].labels.add lbl
 
@@ -186,9 +186,9 @@ func lex(content: string): seq[MaxToken] =
 
     last = curr
 
-
+const versionIdentifier* = "!-_version!"
 func splitMaxIdent(s: string): tuple[ident: string, version: Option[int]] =
-  let parts = s.split "!-_version!"
+  let parts = s.split versionIdentifier
   result.ident = parts[0]
   if parts.len == 2:
     result.version = some parseInt parts[1]
@@ -198,6 +198,7 @@ func parseMax*(content: string): MaxLayout =
     layer = ""
     defVer = 0
     defName: string
+    gcellName: string
 
   for line in splitLines content:
     if not line.isEmptyOrWhitespace:
@@ -237,21 +238,21 @@ func parseMax*(content: string): MaxLayout =
             ints = tokens[2..7].toInts
             lbl = Label(
               text: tokens[8].strVal,
-              pos: toRect ints,
+              position: toRect ints,
               orient: Align ints[4],
               kind: LabelKind ints[5])
 
           result.defs[defName].layers.addLabel layer, lbl
 
         of "gcell":
-          let id = tokens[2].strval
+          gcellName = tokens[2].strval
 
-          result.defs[defName].instances.add Instance(
-            comp: result.defs[id])
+          result.defs[defName].instances[gcellName] = Instance(
+            comp: result.defs[gcellName])
 
         of "bbox":
           let bound = toArrMap[4, MaxToken, int](tokens, getInt, 1)
-          result.defs[defName].instances[^1].bound = bound
+          result.defs[defName].instances[gcellName].bound = bound
 
         of "SECTION", "uses": discard
         of "vMAIN", "vDRC", "vBBOX":
@@ -264,9 +265,9 @@ func parseMax*(content: string): MaxLayout =
               some Array toArrMap[6, MaxToken, int](tokens, getInt, 8)
             else:
               none Array
-          result.defs[defName].instances[^1].uses.add Use(
+          result.defs[defName].instances[gcellName].uses.add Use(
             ident: h,
-            trans: toArrMap[6, MaxToken, int](tokens, getInt, 1),
+            transform: toArrMap[6, MaxToken, int](tokens, getInt, 1),
             array: arr)
 
       of mtkInt: # in layer
@@ -305,7 +306,7 @@ func `$`*(layout: MaxLayout): string =
     buff.add "\nSECTION LABELS {\n"
     for lname, layer in d.layers:
       for lbl in layer.labels:
-        buff.add fmt "lab {lname} {joinSpaces lbl.pos} {lbl.orient.int} {lbl.kind.int} \"{lbl.text}\"\n"
+        buff.add fmt "lab {lname} {joinSpaces lbl.position} {lbl.orient.int} {lbl.kind.int} {lbl.text}\n"
     buff.add "} SECTION LABELS\n"
 
     # buff.add "\nSECTION GROUPS {\n"
@@ -314,12 +315,12 @@ func `$`*(layout: MaxLayout): string =
     if d.instances.len != 0:
       buff.add "\nSECTION INSTANCES {\n"
 
-      for ins in d.instances:
-        buff.add fmt "gcell {ins.comp.version} {ins.comp.ident}\n"
+      for ident, ins in d.instances:
+        buff.add fmt "gcell {ins.comp.version} {ident}\n"
         buff.add fmt "bbox {joinSpaces ins.bound}\n"
         buff.add "uses {\n"
         for u in ins.uses:
-          buff.add fmt "\t{u.ident} {joinSpaces u.trans}"
+          buff.add fmt "\t{u.ident} {joinSpaces u.transform}"
           if issome u.array:
             buff.add fmt " array {joinSpaces u.array.get}\n"
           else:

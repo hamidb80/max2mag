@@ -37,5 +37,13 @@ suite "mag":
 #     for cell, layout in magTable:
 #       writeFile "./temp" / cell & ".mag", $layout
 
-# test "mag -> max":
-#   discard
+test "mag -> max":
+  let
+    path = "./dist/tut/tut4a.mag"
+    pparts = splitFile path
+    layout = parseMag readFile path
+    lkup = loadDeps(layout, pparts.name, @[Path pparts.dir])
+
+  let m = toMax(lkup, pparts.name)
+  # print m
+  writeFile "./temp" / (pparts.name & ".max"), $m
