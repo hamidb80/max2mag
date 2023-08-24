@@ -1,6 +1,7 @@
 import std/[tables, strutils]
 import ./[max, mag, common]
 
+
 func toMaxLayer(l: string): string =
   case l
   of "pdiff", "pdiffusion": "pdif"
@@ -16,6 +17,8 @@ func toMaxLayer(l: string): string =
   of "polysilicon": "m3"
   of "nsubstratencontact": "m4"
   of "psubstratepcontact": "m5"
+  of "pwell": "pwc"
+  of "nwell": "nwc"
   else: l
 
 func toMax(u: mag.Use): max.Use =
@@ -56,10 +59,11 @@ func toMax*(mll: mag.LayoutLookup): max.LayoutLookup =
   for cell, layout in mll:
     var mx = toMax layout
     mx.defs[""].version = layout.timestamp
-    mx.tech = "mmi25" or layout.tech
-    mx.resolution = 0.001
+    mx.tech = layout.tech
+    mx.resolution = 1
     mx.version = 3
     result[cell] = mx
+
 
 func toMagLayer(l: string): string =
   case l
@@ -117,3 +121,7 @@ func toMag(layout: max.Layout, mainCell: string, mll: var mag.LayoutLookup) =
 func toMag*(mll: max.LayoutLookup): mag.LayoutLookup =
   for name, layout in mll:
     toMag layout, name, result
+
+
+template convLayoutFn*(_: typedesc[max.Layout]): untyped = toMax
+template convLayoutFn*(_: typedesc[mag.Layout]): untyped = toMag

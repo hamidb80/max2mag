@@ -317,3 +317,9 @@ In Magic, a circuit layout is a hierarchical collection of cells. Each cell cont
 2. textual labels attached to the paint
 3. subcells, which are instances of other cells
 4. properties, which are arbitrary key-value pairs attached to the cell definition.
+
+## Tech
+http://rfic.eecs.berkeley.edu/~niknejad/doc-05-26-02/techfile.html
+
+lambda:
+https://www.eecg.toronto.edu/~jzhu/courses/ece435/magic_tutorial.pdf

@@ -1,7 +1,10 @@
-import std/[tables, os, strformat, lists]
+import std/[tables, strformat, sequtils, lists, os, paths]
 import ./[max, mag, common]
 
-proc findFile*(fname: string; searchPaths: seq[string]): string =
+
+converter toStr*(p: Path): string = p.string
+
+proc findFile*(fname: Path; searchPaths: seq[Path]): Path =
   for sp in searchPaths:
     let fp = sp / fname
     if fileExists fp:
@@ -9,23 +12,24 @@ proc findFile*(fname: string; searchPaths: seq[string]): string =
 
   err fmt "The file '{fname}' not found in search paths.\nSearch paths:\n {searchPaths}"
 
-proc loadDeps[L](
+proc loadDep[L](cell: string; searchPaths: seq[Path]): L =
+  parseLayoutFn(L)(readFile findFile(Path cell & fileExt(L), searchPaths))
+
+proc loadDepsImpl[L](
   mll: var Table[string, L];
-  cells: var DoublyLinkedList[string];
-  searchPaths: seq[string];
+  neededCells: var DoublyLinkedList[string];
+  searchPaths: seq[Path];
 ) =
-  for cellName in items(cells):
+  for cellName in items neededCells:
     for d in externalDeps mll[cellName]:
       if d notin mll:
-        cells.append d
-        mll[d] = parseLayout(L, readFile findFile(d & fileExt(L), searchPaths))
+        neededCells.append d
+        mll[d] = loadDep[L](d, searchPaths)
 
 proc loadDeps*[L](
-  layout: L;
-  cellName: string;
-  searchPaths: seq[string]
-): Table[string, L] =
-  var cells = initDoublyLinkedList[cell >> string]()
-  cells.append(cellName)
-  result[cellName] = layout
-  loadDeps(result, cells, searchPaths)
+  mll: var Table[string, L];
+  neededCells: seq[string];
+  searchPaths: seq[Path];
+) =
+  var dll = toDoublyLinkedList neededCells
+  loadDepsImpl mll, dll, searchPaths

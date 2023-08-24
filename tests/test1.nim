@@ -1,6 +1,7 @@
-import std/[unittest, tables, os]
-import ../src/pkg/[max, mag, bridge, depsloader]
-import pretty
+import std/[unittest, os, paths]
+import ../src/pkg/[max, mag, common]
+import ../src/max2mag
+# import pretty
 
 discard existsOrCreateDir "./temp"
 
@@ -24,33 +25,22 @@ discard existsOrCreateDir "./temp"
 
 
 test "max -> mag":
-  for p in [
+  let files = toPaths @[
+    "./dist/inv-buff/micro-magic/Buf.max",
     "./dist/tut/array.max",
-    "./dist/inv-buff/micro-magic/Buf.max"
-  ]:
-    let
-      ppart = splitFile p
-      lay = parseMax readfile p 
-      maxs = loadDeps(lay, ppart.name, @[])
-      mags = toMag maxs
+    "./dist/group.max"]
 
-    for cell, layout in mags:
-      writeFile "./temp" / cell & ".mag", $layout
+  max2mag files, @[], Path "./temp/"
 
 test "mag -> max":
-  for path in ["./dist/tut/tut4a.mag", "./temp/Buf.mag"]:
-    let
-      pparts = splitFile path
-      maglayout = parseMag readFile path
-      mglkup = loadDeps(maglayout, pparts.name, @[pparts.dir])
-      mxlkup = toMax mglkup
+  let files = toPaths @[
+    "./dist/tut/tut4a.mag",
+    "./dist/tut/tut11a.mag"]
 
-    print mxlkup
-    for name, maxlayout in mxlkup:
-      writeFile "./temp" / (name & ".max"), $maxlayout
+  mag2max files, @[Path "./dist/tut/"], Path "./temp/"
 
 # test "load max deps":
-#   let 
+#   let
 #     path = "./temp/tut4a.max"
 #     pparts = splitFile path
 #     maxlayout = parseMax readFile path

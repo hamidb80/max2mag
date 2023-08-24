@@ -1,4 +1,4 @@
-import std/[tables, strformat, strutils, lists, options]
+import std/[tables, strformat, strutils, options]
 import ./[common]
 
 
@@ -99,6 +99,4 @@ func `$`*(mag: Layout): string =
 
 
 template fileExt*(_: typedesc[Layout]): string = ".mag"
-
-template parseLayout*(_: typedesc[Layout], content: string): Layout = 
-  parseMag content
+template parseLayoutFn*(_: typedesc[Layout]): untyped = parseMag

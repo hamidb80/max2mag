@@ -1,4 +1,9 @@
-import std/[os, strutils]
+import std/[os, strutils, paths]
+
+converter toStrs*(p: Path): string = p.string
+
+func toPaths*(ps: seq[string]): seq[Path] =
+  cast[seq[Path]](ps)
 
 type
   Align* = enum

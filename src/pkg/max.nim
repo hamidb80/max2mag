@@ -56,6 +56,7 @@ type
 
   MaxTokenKind* = enum
     mtkComment
+    mtkTab
     mtkInt
     mtkFloat
     mtkIdent
@@ -153,7 +154,11 @@ func lex(content: string): seq[MaxToken] =
       bufff = 0.0
 
     case curr
-    of ' ', '\t':
+    of ' ':
+      inc i
+
+    of '\t':
+      sett MaxToken(kind: mtkTab)
       inc i
 
     of '{':
@@ -207,7 +212,7 @@ func parseMax*(content: string): Layout =
     gcellName: string
 
   for line in splitLines content:
-    if not line.isEmptyOrWhitespace:
+    if not isEmptyOrWhitespace line:
       let
         tokens = lex line
         head = tokens[0]
@@ -265,24 +270,31 @@ func parseMax*(content: string): Layout =
         of "vMAIN", "vDRC", "vBBOX":
           result.defs[""].version = tokens[1].intVal
 
-        else: # in uses
-          let arr =
-            if tokens.len > 7:
-              assert tokens[7].strval == "array"
-              some Array toArrMap[6, MaxToken, int](tokens, getInt, 8)
-            else:
-              none Array
-          result.defs[defName].instances[gcellName].uses.add Use(
-            ident: h,
-            transform: toArrMap[6, MaxToken, int](tokens, getInt, 1),
-            array: arr)
+        else: err "invalid token: {head}"
 
       of mtkInt: # in layer
-        let bound = toRect tokens.toInts
+        let bound = tokens.toInts.toRect
         result.defs[defName].layers.addRect layer, bound
 
+      of mtkTab:
+        case tokens[1].kind
+        of mtkIdent: # in uses
+          let arr =
+            if tokens.len > 8:
+              assert tokens[8].strval == "array"
+              some Array toArrMap[6, MaxToken, int](tokens, getInt, 9)
+            else:
+              none Array
+
+          result.defs[defName].instances[gcellName].uses.add Use(
+            ident: tokens[1].strval,
+            transform: toArrMap[6, MaxToken, int](tokens, getInt, 2),
+            array: arr)
+
+        else: err "invalid token after tab: {tokens[1]}"
+
       of mtkCloseBracket, mtkComment: discard
-      else: err "invalid node kind: " & $head.kind & ' ' & $head
+      else: err fmt"invalid node kind: {head.kind} {head} in {line}"
 
 func `$`*(layout: Layout): string =
   result.add "# This file is created by max2mag tool\n\n"
@@ -355,6 +367,4 @@ func `$`*(layout: Layout): string =
 
 
 template fileExt*(_: typedesc[Layout]): string = ".max"
-
-template parseLayout*(_: typedesc[Layout], content: string): Layout =
-  parseMax content
+template parseLayoutFn*(_: typedesc[Layout]): untyped = parseMax
