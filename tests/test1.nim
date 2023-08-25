@@ -1,4 +1,4 @@
-import std/[unittest, os, paths]
+import std/[unittest, os, paths, sequtils]
 import ../src/pkg/[max, mag, common]
 import ../src/max2mag
 # import pretty
@@ -33,10 +33,7 @@ test "max -> mag":
   max2mag files, @[], Path "./temp/"
 
 test "mag -> max":
-  let files = toPaths @[
-    "./dist/tut/tut4a.mag",
-    "./dist/tut/tut11a.mag"]
-
+  let files = toPaths toseq walkFiles "./dist/tut/*.mag"
   mag2max files, @[Path "./dist/tut/"], Path "./temp/"
 
 # test "load max deps":

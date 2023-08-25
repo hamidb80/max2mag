@@ -34,6 +34,11 @@ iterator externalDeps*(l: Layout): string =
 func parseMag*(content: string): Layout =
   var lastLayer = ""
 
+
+  #TODO consider this as string
+  # "rlabel ndiffusion -27 14 -27 17 3 bad2 (can't route to diff)"
+
+
   for line in content.splitLines:
     if not line.isEmptyOrWhitespace:
       let parts = line.splitWhitespace
@@ -65,7 +70,7 @@ func parseMag*(content: string): Layout =
           layer: parts[1],
           position: Rect toArrMap[4, string, int](parts, parseInt, 2),
           kind: parseint parts[6],
-          text: parts[7].strip '"')
+          text: parts[7..^1].join(" ").strip '"')
 
       else: err fmt"invalid command '{parts[0]}'"
 

@@ -13,7 +13,7 @@ proc findFile*(fname: Path; searchPaths: seq[Path]): Path =
   err fmt "The file '{fname}' not found in search paths.\nSearch paths:\n {searchPaths}"
 
 proc loadDep[L](cell: string; searchPaths: seq[Path]): L =
-  parseLayoutFn(L)(readFile findFile(Path cell & fileExt(L), searchPaths))
+  (parseLayoutFn L)(readFile findFile(Path cell & fileExt(L), searchPaths))
 
 proc loadDepsImpl[L](
   mll: var Table[string, L];

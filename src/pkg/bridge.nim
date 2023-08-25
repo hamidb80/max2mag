@@ -59,7 +59,7 @@ func toMax*(mll: mag.LayoutLookup): max.LayoutLookup =
   for cell, layout in mll:
     var mx = toMax layout
     mx.defs[""].version = layout.timestamp
-    mx.tech = layout.tech
+    mx.tech = "mmi25" or layout.tech
     mx.resolution = 1
     mx.version = 3
     result[cell] = mx
