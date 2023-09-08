@@ -1,14 +1,9 @@
 import std/[os, strutils, paths]
 
 
-type ConvMode* = enum
-  max2mag
-  mag2max
-
-
 converter toStrs*(p: Path): string = p.string
 
-func toPaths*(ps: seq[string]): seq[Path] =
+template toPaths*(ps: seq[string]): seq[Path] =
   cast[seq[Path]](ps)
 
 type
