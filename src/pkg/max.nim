@@ -42,7 +42,8 @@ type
     ident*, showName*, insName*: string
     version*: int
     layers*: LayerTable
-    instances*: OrderedTable[ident >> string, Instance] # main & group def can have this section
+    instances*: OrderedTable[ident >> string,
+        Instance] # main & group def can have this section
 
   DefineTable = OrderedTable[defIdent >> string, Component]
 
@@ -208,7 +209,7 @@ func parseMax*(content: string): Layout =
   var
     layer = ""
     defVer = 0
-    defName: string
+    defName = ""
     gcellName: string
 
   for line in splitLines content:
@@ -266,9 +267,14 @@ func parseMax*(content: string): Layout =
           result.defs[defName].instances[gcellName].bound = bound
 
         of "SECTION", "uses": discard
-        of "def": err "not implemented"
+        of "def":
+          gcellName = tokens[1].strVal
+          result.defs[defName].instances[gcellName] = Instance(
+            comp: gcellName)
+
+
         of "vMAIN", "vDRC", "vBBOX":
-          result.defs[""].version = tokens[1].intVal
+          result.defs[defName].version = tokens[1].intVal
 
         else: err "invalid token: {head}"
 

@@ -14,4 +14,5 @@ bin           = @["max2mag"]
 requires "nim >= 2.0.0"
 
 task gen, "generates app":
-    exec "nim -d:release -o:./maxmag c src/main.nim"
+    mkdir "./bin/"
+    exec "nim -d:release --opt:speed --mm:arc -o:./bin/maxmag c src/main.nim"
