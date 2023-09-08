@@ -2,7 +2,7 @@ import std/[tables, sequtils, lists, strutils, strformat, paths, os]
 import ./pkg/[mag, max, bridge, depsloader, common, types]
 
 
-proc conv*[L1, L2](
+proc convertImpl[L1, L2](
   files, searchPaths: seq[Path],
   destPath, layerMapperPath: Path,
   tech: string,
@@ -27,9 +27,9 @@ proc convert*(
 ) =
   case mode
   of max2mag:
-    conv[max.Layout, mag.Layout](files, searchPaths, destPath, layerMapperPath, tech)
+    convertImpl[max.Layout, mag.Layout](files, searchPaths, destPath, layerMapperPath, tech)
   of mag2max:
-    conv[mag.Layout, max.Layout](files, searchPaths, destPath, layerMapperPath, tech)
+    convertImpl[mag.Layout, max.Layout](files, searchPaths, destPath, layerMapperPath, tech)
 
 
 func cmdParams2Table(s: seq[string]): OrderedSeqTable[string, string] =
@@ -42,14 +42,20 @@ func cmdParams2Table(s: seq[string]): OrderedSeqTable[string, string] =
       result.add lastKey, w
 
 when isMainModule:
-  const help = """
-
+  const help = dedent """
+  USAGE:
+    ./app 
+        -I <MAX_or_MAG_FILE_1> <MAX_or_MAG_FILE_2> ...
+        -O <DEST_DIR>
+        -S <DEPENDENCY_SEARCH_DIR_1> <DEPENDENCY_SEARCH_DIR_2> ...
+        -T <TECH>
+        -L <LAYER_MAPPER_FILE_PATH>
   """
 
   let params = cmdParams2Table commandLineParams()
-  if params.len == 0: echo help
+  if params.len == 0: quit help
   else:
-    var 
+    var
       files, searchPaths: seq[Path]
       destDir, layerMapperPath: Path
       tech: string
@@ -66,19 +72,17 @@ when isMainModule:
         layerMapperPath = Path args[0]
       of "-T", "--tech": # dest tech
         tech = args[0]
-      of "--help", "-H", "-h":
-        echo help
       else:
         err fmt"invalid flag {cmd}"
 
     assert tech != "", "tech is not specified"
     assert files.len != 0, "no input files provided"
     assert destDir.string.len != 0, "output dir is missing"
-    assert layerMapperPath.string.len != 0, "wheres layer.mapper.cfg ??"
+    assert layerMapperPath.string.len != 0, "where is your layer mapper ??"
 
     let
-      ext = files[0].string.splitFile.ext 
-      mode = 
+      ext = files[0].string.splitFile.ext
+      mode =
         case ext
         of ".max", ".MAX": max2mag
         of ".mag", ".MAG": mag2max
