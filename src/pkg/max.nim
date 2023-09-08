@@ -36,15 +36,15 @@ type
     # WIREPATH
 
   # LayerTable = OrderedTable[layer >> string, Layer]
-  LayerTable = Table[layer >> string, Layer]
+  LayerTable = OrderedTable[layer >> string, Layer]
 
   Component* = ref object
     ident*, showName*, insName*: string
     version*: int
     layers*: LayerTable
-    instances*: Table[ident >> string, Instance] # main & group def can have this section
+    instances*: OrderedTable[ident >> string, Instance] # main & group def can have this section
 
-  DefineTable = Table[defIdent >> string, Component]
+  DefineTable = OrderedTable[defIdent >> string, Component]
 
   Layout* = object
     version*: int

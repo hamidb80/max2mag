@@ -1,5 +1,11 @@
 import std/[os, strutils, paths]
 
+
+type ConvMode* = enum
+  max2mag
+  mag2max
+
+
 converter toStrs*(p: Path): string = p.string
 
 func toPaths*(ps: seq[string]): seq[Path] =
@@ -43,6 +49,12 @@ template `>>`*(lable, typee): untyped =
 
 template err*(msg): untyped =
   raise newException(ValueError, msg)
+
+template writeFile*(p: Path, c: string): untyped =
+  writeFile string p, c
+
+template `/`*(p: Path, s: string): untyped =
+  p / Path s
 
 template `or`*(a, b: string): string =
   if a == "": b
