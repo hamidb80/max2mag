@@ -1,4 +1,8 @@
-# Max To Mag :: max2mag
+# Max <=> Mag :: maxmag
+compile with:
+```bash
+nimble gen
+```
 
 ## Resources
 [_how to download them all?_](https://www.tupp.me/2014/06/how-to-crawl-website-with-linux-wget.html)

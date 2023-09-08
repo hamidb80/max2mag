@@ -12,3 +12,6 @@ bin           = @["max2mag"]
 # Dependencies
 
 requires "nim >= 2.0.0"
+
+task gen, "generates app":
+    exec "nim -d:release -o:./maxmag c src/main.nim"
