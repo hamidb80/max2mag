@@ -5,8 +5,8 @@ type
   OrderedSeqTable*[A, B] = Table[A, seq[B]]
 
   ConvMode* = enum
-    max2mag
-    mag2max
+    max2mag = "max => mag"
+    mag2max = "mag => max"
 
 
 func add*[A, B](st: var OrderedSeqTable[A, B], key: A, val: B) =

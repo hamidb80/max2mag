@@ -14,7 +14,7 @@ proc convertImpl[L1, L2](
     let pparts = splitFile path
     lookup[pparts.name] = (parseLayoutFn L1)(readFile path)
 
-  lookup.loadDeps toseq keys lookup, searchPaths
+  loadDeps lookup, toseq keys lookup, searchPaths
 
   for cell, layout in (convLayoutFn L2)(lookup, lmap, tech):
     writeFile destPath / (cell & (fileExt L2)), $layout
@@ -43,6 +43,8 @@ func cmdParams2Table(s: seq[string]): OrderedSeqTable[string, string] =
 
 when isMainModule:
   const help = dedent """
+  Micro Magic Max (.max) <=> Magic (.mag)
+
   USAGE:
     ./app 
         -I <MAX_or_MAG_FILE_1> <MAX_or_MAG_FILE_2> ...
@@ -88,4 +90,7 @@ when isMainModule:
         of ".mag", ".MAG": mag2max
         else: err fmt"invalid input file format, expected .max or .mag but got: '{ext}'"
 
+    echo "Conversion Direction: " & $mode
+    echo "Converting ..."
     convert mode, files, searchPaths, destDir, layerMapperPath, tech
+    echo "Done!"

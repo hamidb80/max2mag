@@ -303,7 +303,7 @@ func parseMax*(content: string): Layout =
       else: err fmt"invalid node kind: {head.kind} {head} in {line}"
 
 func `$`*(layout: Layout): string =
-  result.add "# This file is created by max2mag tool\n\n"
+  result.add "# This file is created by 'maxmag' tool\n\n"
   result.add fmt "max {layout.version}\n"
   result.add fmt "tech {layout.tech}\n"
   result.add fmt "resolution {layout.resolution}\n"
