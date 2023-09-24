@@ -2,7 +2,7 @@
 
 version       = "0.0.1"
 author        = "hamidb80" # hr.bolouri@gmail.com
-description   = "layout converter for Openfabless Magic (.mag) and Micro Magic (.max)"
+description   = "layout converter for Open Circuit Design Magic (.mag) and Micro Magic (.max)"
 license       = "MIT"
 srcDir        = "src"
 installExt    = @["nim"]
