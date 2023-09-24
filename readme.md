@@ -1,6 +1,6 @@
 # References
 - [Micro Magic Public Domain](https://github.com/yarpose/YARPOSE.Micromagic_PD)
-- [Magic](https://github.com/RTimothyEdwards/magic)
+- [Open Circuit Design Magic](https://github.com/RTimothyEdwards/magic)
 
 # Compile
 Make sure you have [Nim programming language](https://nim-lang.org/) version 2.0.0, then run:
